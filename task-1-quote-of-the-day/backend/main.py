@@ -1,7 +1,8 @@
 import random
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -41,6 +42,24 @@ quotes = [
 ]
 
 
+class Quote(BaseModel):
+    text: str
+    author: str
+
+
 @app.get("/quote")
 def get_quote():
     return random.choice(quotes)
+
+
+@app.post("/quote", status_code=201)
+def add_quote(quote: Quote):
+    text = quote.text.strip()
+    author = quote.author.strip()
+
+    if not text or not author:
+        raise HTTPException(status_code=400, detail="Text and author are required.")
+
+    new_quote = {"text": text, "author": author}
+    quotes.append(new_quote)
+    return new_quote

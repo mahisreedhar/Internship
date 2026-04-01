@@ -70,3 +70,67 @@
 .new-quote-btn:hover {
   background-color: #f3b6d0;
 }
+
+.add-quote-form {
+  margin-top: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  width: min(500px, 100%);
+  margin-inline: auto;
+  padding: 16px;
+  border-radius: 14px;
+  background: #fdf7fb;
+  border: 1px solid #f3dce8;
+}
+
+.quote-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #e8d9e4;
+  border-radius: 10px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  background: #fffafb;
+  color: #2b2f39;
+  box-shadow: inset 0 1px 1px rgba(17, 24, 39, 0.03);
+}
+
+.quote-input::placeholder {
+  color: #9a8b98;
+}
+
+.quote-input:focus {
+  outline: none;
+  border-color: #f3b6d0;
+  box-shadow: 0 0 0 3px rgba(243, 182, 208, 0.35);
+}
+
+.add-quote-btn {
+  margin-top: 6px;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #5c2940;
+  background-color: #f8c8dc;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.add-quote-btn:hover {
+  background-color: #f3b6d0;
+}
+
+.add-quote-btn:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.form-message {
+  margin: 6px 0 0;
+  font-size: 0.95rem;
+  color: #4b5563;
+}
