@@ -2,7 +2,12 @@
 __pycache__/
 *.py[cod]
 
-# Virtual environments
+# Python virtual environments
 .venv/
 venv/
-backend/venv/
+**/.venv/
+**/venv/
+
+# Frontend build/dependency folders
+**/node_modules/
+**/dist/
