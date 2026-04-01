@@ -1,8 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import './App.css'
 
+type Quote = {
+  text: string
+  author: string
+}
+
 function App() {
-  const [quote, setQuote] = useState(null)
+  const [quote, setQuote] = useState<Quote | null>(null)
   const [newQuoteText, setNewQuoteText] = useState('')
   const [newQuoteAuthor, setNewQuoteAuthor] = useState('')
   const [formMessage, setFormMessage] = useState('')
@@ -15,7 +20,7 @@ function App() {
         throw new Error('Failed to fetch quote')
       }
 
-      const data = await response.json()
+      const data: Quote = await response.json()
       setQuote(data)
     } catch {
       setQuote({
@@ -29,7 +34,7 @@ function App() {
     fetchQuote()
   }, [])
 
-  const handleAddQuote = async (event) => {
+  const handleAddQuote = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     const text = newQuoteText.trim()
@@ -56,7 +61,7 @@ function App() {
         throw new Error('Failed to add quote')
       }
 
-      const data = await response.json()
+      const data: Quote = await response.json()
       setQuote(data)
       setNewQuoteText('')
       setNewQuoteAuthor('')
