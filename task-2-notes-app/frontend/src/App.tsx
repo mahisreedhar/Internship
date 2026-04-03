@@ -7,6 +7,7 @@ interface Note {
   id: number
   title: string
   content: string
+  updated_at: string
 }
 
 interface DeleteResponse {
@@ -23,10 +24,16 @@ const pastelPalette: string[] = [
   '#e0f0c9',
 ]
 
-const noteTimePlaceholder = 'Last edited: --:--'
-
 function getNoteColor(noteId: number): string {
   return pastelPalette[noteId % pastelPalette.length]
+}
+
+function formatLastEdited(updatedAt: string): string {
+  const date = new Date(updatedAt)
+  if (Number.isNaN(date.getTime())) {
+    return '--:--'
+  }
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
 function isNote(value: unknown): value is Note {
@@ -39,7 +46,8 @@ function isNote(value: unknown): value is Note {
   return (
     typeof candidate.id === 'number' &&
     typeof candidate.title === 'string' &&
-    typeof candidate.content === 'string'
+    typeof candidate.content === 'string' &&
+    typeof candidate.updated_at === 'string'
   )
 }
 
@@ -301,7 +309,7 @@ function App() {
             )}
 
             <footer className="note-footer">
-              <p className="note-time">{noteTimePlaceholder}</p>
+              <p className="note-time">Last edited: {formatLastEdited(note.updated_at)}</p>
               <div className="card-actions">
                 {editingCardId === note.id ? (
                   <>

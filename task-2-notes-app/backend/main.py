@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Path as PathParam, status
@@ -32,9 +33,25 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS notes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
-                content TEXT NOT NULL
+                content TEXT NOT NULL,
+                updated_at TEXT
             )
             """
+        )
+
+        columns = connection.execute("PRAGMA table_info(notes)").fetchall()
+        column_names = {column["name"] for column in columns}
+
+        if "updated_at" not in column_names:
+            connection.execute("ALTER TABLE notes ADD COLUMN updated_at TEXT")
+
+        connection.execute(
+            """
+            UPDATE notes
+            SET updated_at = ?
+            WHERE updated_at IS NULL OR TRIM(updated_at) = ''
+            """,
+            (current_timestamp(),),
         )
         connection.commit()
 
@@ -54,6 +71,7 @@ class NoteUpdate(NoteBase):
 
 class NoteResponse(NoteBase):
     id: int
+    updated_at: str
 
 
 class DeleteResponse(BaseModel):
@@ -76,20 +94,25 @@ def normalize_note_fields(title: str, content: str) -> tuple[str, str]:
     return clean_title, clean_content
 
 
+def current_timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 @app.post("/notes", response_model=NoteResponse, status_code=status.HTTP_201_CREATED)
 def create_note(note: NoteCreate):
     clean_title, clean_content = normalize_note_fields(note.title, note.content)
+    updated_at = current_timestamp()
 
     with get_connection() as connection:
         cursor = connection.execute(
-            "INSERT INTO notes (title, content) VALUES (?, ?)",
-            (clean_title, clean_content),
+            "INSERT INTO notes (title, content, updated_at) VALUES (?, ?, ?)",
+            (clean_title, clean_content, updated_at),
         )
         connection.commit()
         note_id = cursor.lastrowid
 
         created_note = connection.execute(
-            "SELECT id, title, content FROM notes WHERE id = ?",
+            "SELECT id, title, content, updated_at FROM notes WHERE id = ?",
             (note_id,),
         ).fetchone()
 
@@ -99,7 +122,9 @@ def create_note(note: NoteCreate):
 @app.get("/notes", response_model=list[NoteResponse])
 def get_notes():
     with get_connection() as connection:
-        rows = connection.execute("SELECT id, title, content FROM notes").fetchall()
+        rows = connection.execute(
+            "SELECT id, title, content, updated_at FROM notes ORDER BY id DESC"
+        ).fetchall()
     return [dict(row) for row in rows]
 
 
@@ -109,11 +134,12 @@ def update_note(
     note_id: int = PathParam(..., ge=1),
 ):
     clean_title, clean_content = normalize_note_fields(note.title, note.content)
+    updated_at = current_timestamp()
 
     with get_connection() as connection:
         cursor = connection.execute(
-            "UPDATE notes SET title = ?, content = ? WHERE id = ?",
-            (clean_title, clean_content, note_id),
+            "UPDATE notes SET title = ?, content = ?, updated_at = ? WHERE id = ?",
+            (clean_title, clean_content, updated_at, note_id),
         )
         connection.commit()
 
@@ -121,7 +147,7 @@ def update_note(
             raise HTTPException(status_code=404, detail="Note not found.")
 
         updated_note = connection.execute(
-            "SELECT id, title, content FROM notes WHERE id = ?",
+            "SELECT id, title, content, updated_at FROM notes WHERE id = ?",
             (note_id,),
         ).fetchone()
 
