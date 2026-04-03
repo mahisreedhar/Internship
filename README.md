@@ -1,4 +1,4 @@
-# LexMirror
+
 
 This repository is organized as a monorepo so multiple internship tasks can live in one place.
 
