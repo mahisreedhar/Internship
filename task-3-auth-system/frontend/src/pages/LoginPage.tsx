@@ -44,8 +44,7 @@ export function LoginPage() {
 
   return (
     <AuthCard
-      title="Welcome Back"
-      subtitle="Log in to open your dashboard."
+      title="Login"
       footerText="Need an account?"
       footerLinkTo="/signup"
       footerLinkLabel="Create one"

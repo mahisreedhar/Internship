@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 
 type AuthCardProps = {
   title: string
-  subtitle: string
+  subtitle?: string
   footerText: string
   footerLinkTo: string
   footerLinkLabel: string
@@ -23,7 +23,7 @@ export function AuthCard({
       <section className="auth-card">
         <p className="eyebrow">Auth System</p>
         <h1>{title}</h1>
-        <p className="auth-subtitle">{subtitle}</p>
+        {subtitle ? <p className="auth-subtitle">{subtitle}</p> : null}
         {children}
         <p className="auth-footer">
           {footerText} <Link to={footerLinkTo}>{footerLinkLabel}</Link>

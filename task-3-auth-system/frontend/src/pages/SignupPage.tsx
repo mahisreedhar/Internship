@@ -48,7 +48,6 @@ export function SignupPage() {
   return (
     <AuthCard
       title="Create Account"
-      subtitle="Sign up to get started with your private dashboard."
       footerText="Already registered?"
       footerLinkTo="/login"
       footerLinkLabel="Login"
