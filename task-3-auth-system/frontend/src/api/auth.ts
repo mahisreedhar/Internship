@@ -1,6 +1,7 @@
 const API_BASE_URL = 'http://127.0.0.1:8000'
 
 export const AUTH_TOKEN_KEY = 'auth_token'
+export const AUTH_SESSION_START_KEY = 'auth_session_started_at'
 
 export type AuthPayload = {
   email: string
@@ -80,14 +81,30 @@ export async function fetchMe(token: string): Promise<MeResponse> {
 
 export function setAuthToken(token: string): void {
   localStorage.setItem(AUTH_TOKEN_KEY, token)
+  localStorage.setItem(AUTH_SESSION_START_KEY, String(Date.now()))
 }
 
 export function getAuthToken(): string | null {
   return localStorage.getItem(AUTH_TOKEN_KEY)
 }
 
+export function getSessionStartedAt(): number | null {
+  const value = localStorage.getItem(AUTH_SESSION_START_KEY)
+  if (!value) {
+    return null
+  }
+
+  const parsed = Number(value)
+  if (Number.isNaN(parsed) || parsed <= 0) {
+    return null
+  }
+
+  return parsed
+}
+
 export function clearAuthToken(): void {
   localStorage.removeItem(AUTH_TOKEN_KEY)
+  localStorage.removeItem(AUTH_SESSION_START_KEY)
 }
 
 export function isUnauthorizedError(error: unknown): error is ApiError {
