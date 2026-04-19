@@ -60,7 +60,6 @@ export function SignupPage() {
             id="signup-email"
             type="email"
             autoComplete="email"
-            placeholder="you@example.com"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             required
@@ -73,7 +72,6 @@ export function SignupPage() {
             id="signup-password"
             type="password"
             autoComplete="new-password"
-            placeholder="Create a password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
