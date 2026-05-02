@@ -10,7 +10,7 @@ const REALMS = [
 ];
 
 const TOP_NAV_LINKS = ["Great Houses", "Characters", "Map", "History"];
-const ITEMS_PER_PAGE = 6;
+const ITEMS_PER_PAGE = 10;
 
 function Dashboard() {
   const [characters, setCharacters] = useState([]);
@@ -115,31 +115,29 @@ function Dashboard() {
     return paginatedCharacters.map((character) => (
       <article
         key={character.id}
-        className="group relative h-[500px] overflow-hidden border border-[#D4AF37]/20 shadow-2xl transition-all duration-500 hover:border-[#D4AF37]/60"
+        className="group relative overflow-hidden border border-[#D4AF37]/20 shadow-2xl transition-all duration-500 hover:z-10 hover:scale-105 hover:border-[#D4AF37]/60 hover:shadow-[0_0_15px_rgba(212,175,55,0.3)]"
       >
-        <div className="absolute inset-0 z-0">
-          <div
-            className="h-full w-full bg-cover bg-center grayscale-[0.4] contrast-[1.15] transition-transform duration-700 group-hover:scale-110"
-            style={{
-              backgroundImage: `url(${character.imageUrl})`,
-              backgroundSize: "cover",
-            }}
-            aria-hidden="true"
+        <div className="relative aspect-[2/3] w-full">
+          <img
+            src={character.imageUrl}
+            alt={character.fullName || "Unknown character"}
+            className="h-full w-full object-cover object-top"
+            loading="lazy"
           />
-        </div>
 
-        <div className="absolute inset-0 z-10 bg-gradient-to-t from-black via-black/40 to-transparent" />
+          <div className="absolute inset-0 z-10 bg-[linear-gradient(to_top,rgba(11,12,16,0.98)_0%,rgba(11,12,16,0.8)_38%,rgba(11,12,16,0.15)_72%,rgba(11,12,16,0)_100%)]" />
 
-        <div className="absolute bottom-0 left-0 z-20 w-full border-t border-[#D4AF37]/20 bg-black/40 p-8 backdrop-blur-md">
-          <h3 className="font-headline-md text-headline-md text-primary">{character.fullName || "Unknown Name"}</h3>
-          <p className="mt-2 font-body-md text-body-md text-secondary uppercase tracking-[0.2em] text-xs">
-            {character.title || "No Known Title"}
-          </p>
-          <div className="mt-4 flex items-center">
-            <span className="mr-4 h-[1px] w-8 bg-[#D4AF37]/40" />
-            <span className="font-label-caps text-label-caps text-silver-400">
-              {character.family || "Unknown Family"}
-            </span>
+          <div className="absolute bottom-0 left-0 z-20 w-full border-t border-[#D4AF37]/20 bg-black/40 p-6 backdrop-blur-md">
+            <h3 className="font-headline-md text-headline-md text-primary">{character.fullName || "Unknown Name"}</h3>
+            <p className="mt-2 font-body-md text-body-md text-secondary uppercase tracking-[0.2em] text-xs">
+              {character.title || "No Known Title"}
+            </p>
+            <div className="mt-4 flex items-center">
+              <span className="mr-4 h-[1px] w-8 bg-[#D4AF37]/40" />
+              <span className="font-label-caps text-label-caps text-silver-400">
+                {character.family || "Unknown Family"}
+              </span>
+            </div>
           </div>
         </div>
       </article>
@@ -258,7 +256,7 @@ function Dashboard() {
 
           <div className="throne-divider mb-section-gap" />
 
-          <section className="grid grid-cols-1 gap-gutter md:grid-cols-2 xl:grid-cols-3">
+          <section className="grid grid-cols-1 gap-gutter md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
             {renderCards()}
           </section>
 
