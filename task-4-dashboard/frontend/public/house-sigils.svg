@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <style>
+      .shield {
+        fill: #0b0c10;
+        stroke: #d4af37;
+        stroke-width: 4;
+      }
+      .mark {
+        fill: #d4af37;
+        font-family: "Cinzel Decorative", serif;
+        font-size: 30px;
+        font-weight: 700;
+        text-anchor: middle;
+      }
+      .line {
+        stroke: #d4af37;
+        stroke-width: 3;
+        fill: none;
+        stroke-linecap: round;
+      }
+    </style>
+  </defs>
+
+  <symbol id="sigil-generic" viewBox="0 0 120 120">
+    <path class="shield" d="M60 10l40 14v33c0 24-15 42-40 55-25-13-40-31-40-55V24z" />
+    <text class="mark" x="60" y="72">H</text>
+  </symbol>
+
+  <symbol id="sigil-stark" viewBox="0 0 120 120">
+    <path class="shield" d="M60 10l40 14v33c0 24-15 42-40 55-25-13-40-31-40-55V24z" />
+    <path class="line" d="M38 76l9-21 13 11 18-22" />
+    <text class="mark" x="60" y="94">S</text>
+  </symbol>
+
+  <symbol id="sigil-lannister" viewBox="0 0 120 120">
+    <path class="shield" d="M60 10l40 14v33c0 24-15 42-40 55-25-13-40-31-40-55V24z" />
+    <circle cx="60" cy="55" r="14" fill="none" stroke="#d4af37" stroke-width="3" />
+    <text class="mark" x="60" y="92">L</text>
+  </symbol>
+
+  <symbol id="sigil-targaryen" viewBox="0 0 120 120">
+    <path class="shield" d="M60 10l40 14v33c0 24-15 42-40 55-25-13-40-31-40-55V24z" />
+    <path class="line" d="M42 67c7-14 30-14 36 0M43 52c5-8 12-12 17-12 5 0 12 4 17 12" />
+    <text class="mark" x="60" y="94">T</text>
+  </symbol>
+
+  <symbol id="sigil-baratheon" viewBox="0 0 120 120">
+    <path class="shield" d="M60 10l40 14v33c0 24-15 42-40 55-25-13-40-31-40-55V24z" />
+    <path class="line" d="M47 71V45M73 71V45M47 52l-9-8M73 52l9-8" />
+    <text class="mark" x="60" y="95">B</text>
+  </symbol>
+
+  <symbol id="sigil-greyjoy" viewBox="0 0 120 120">
+    <path class="shield" d="M60 10l40 14v33c0 24-15 42-40 55-25-13-40-31-40-55V24z" />
+    <path class="line" d="M60 42v30M60 56c-7 0-10 6-10 10M60 56c7 0 10 6 10 10M60 50c-10 0-16-5-16-9M60 50c10 0 16-5 16-9" />
+    <text class="mark" x="60" y="95">G</text>
+  </symbol>
+
+  <symbol id="sigil-arryn" viewBox="0 0 120 120">
+    <path class="shield" d="M60 10l40 14v33c0 24-15 42-40 55-25-13-40-31-40-55V24z" />
+    <path class="line" d="M39 66l21-25 21 25M47 66h26" />
+    <text class="mark" x="60" y="94">A</text>
+  </symbol>
+
+  <symbol id="sigil-martell" viewBox="0 0 120 120">
+    <path class="shield" d="M60 10l40 14v33c0 24-15 42-40 55-25-13-40-31-40-55V24z" />
+    <circle cx="60" cy="55" r="9" fill="none" stroke="#d4af37" stroke-width="3" />
+    <path class="line" d="M60 36v38M41 55h38" />
+    <text class="mark" x="60" y="94">M</text>
+  </symbol>
+
+  <symbol id="sigil-tyrell" viewBox="0 0 120 120">
+    <path class="shield" d="M60 10l40 14v33c0 24-15 42-40 55-25-13-40-31-40-55V24z" />
+    <path class="line" d="M60 39v32M44 55h32M49 45l22 20M49 65l22-20" />
+    <text class="mark" x="60" y="94">Y</text>
+  </symbol>
+
+  <symbol id="sigil-tully" viewBox="0 0 120 120">
+    <path class="shield" d="M60 10l40 14v33c0 24-15 42-40 55-25-13-40-31-40-55V24z" />
+    <path class="line" d="M43 49c0 12 7 21 17 21s17-9 17-21" />
+    <text class="mark" x="60" y="94">U</text>
+  </symbol>
+</svg>

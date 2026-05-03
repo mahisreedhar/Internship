@@ -14,8 +14,11 @@ def _raven_exception():
 
 
 @router.get("/api/houses")
-def get_houses(page: int = 1):
-    url = f"https://anapioficeandfire.com/api/houses?page={page}&pageSize=10"
+def get_houses(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50, alias="pageSize"),
+):
+    url = f"https://anapioficeandfire.com/api/houses?page={page}&pageSize={page_size}"
 
     try:
         response = requests.get(url, timeout=10)

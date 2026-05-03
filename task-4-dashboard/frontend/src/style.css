@@ -8,8 +8,8 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: "Ubuntu", sans-serif;
-  color: #e2e2e2;
-  background: #131313;
+  color: #e0e6ed;
+  background: #0b0c10;
   overflow-x: hidden;
 }
 
@@ -18,7 +18,7 @@ body {
 }
 
 .smoke-bg {
-  background: radial-gradient(circle at 50% 50%, rgb(31 31 31 / 80%) 0%, rgb(14 14 14) 100%);
+  background: radial-gradient(circle at 50% 50%, rgb(21 24 30 / 78%) 0%, rgb(11 12 16) 100%);
 }
 
 .throne-divider {
@@ -36,7 +36,7 @@ body {
   top: 50%;
   transform: translate(-50%, -50%);
   color: #d4af37;
-  background: #131313;
+  background: #0b0c10;
   padding: 0 10px;
   font-size: 10px;
 }
