@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getThronesCharacters } from "../services/api";
 
 const REALMS = [
@@ -9,15 +9,18 @@ const REALMS = [
   { label: "The Vale", icon: "terrain", active: false },
 ];
 
-const TOP_NAV_LINKS = ["Great Houses", "Characters", "Map", "History"];
-const ITEMS_PER_PAGE = 10;
+const TOP_NAV_LINKS = ["Great Houses", "Characters"];
+const PAGE_SIZE = 10;
 
 function Dashboard() {
   const [characters, setCharacters] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [fatalError, setFatalError] = useState(null);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrevious, setHasPrevious] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.add("dark");
@@ -30,16 +33,35 @@ function Dashboard() {
     const loadCharacters = async () => {
       setIsLoading(true);
       setError("");
+      setFatalError(null);
 
       try {
-        const result = await getThronesCharacters();
-        if (isActive) {
-          setCharacters(Array.isArray(result) ? result : []);
+        const payload = await getThronesCharacters({
+          page,
+          pageSize: PAGE_SIZE,
+          search: query,
+        });
+
+        if (!isActive) {
+          return;
         }
+
+        setCharacters(Array.isArray(payload?.items) ? payload.items : []);
+        setHasNext(Boolean(payload?.has_next));
+        setHasPrevious(Boolean(payload?.has_previous));
       } catch (err) {
-        if (isActive) {
-          setError(err?.message || "The ravens are tired. Character records are unavailable.");
-          setCharacters([]);
+        if (!isActive) {
+          return;
+        }
+
+        const message = err?.message || "The Ravens are tired. GoT API is down or rate-limited.";
+        setError(message);
+        setCharacters([]);
+        setHasNext(false);
+        setHasPrevious(page > 1);
+
+        if (err?.status === 503 || message.toLowerCase().includes("ravens are tired")) {
+          setFatalError(err instanceof Error ? err : new Error(message));
         }
       } finally {
         if (isActive) {
@@ -53,35 +75,11 @@ function Dashboard() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [page, query]);
 
-  const filteredCharacters = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) {
-      return characters;
-    }
-
-    return characters.filter((character) => {
-      const fullName = (character.fullName || "").toLowerCase();
-      const title = (character.title || "").toLowerCase();
-      const family = (character.family || "").toLowerCase();
-      return fullName.includes(normalizedQuery) || title.includes(normalizedQuery) || family.includes(normalizedQuery);
-    });
-  }, [characters, query]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredCharacters.length / ITEMS_PER_PAGE));
-
-  useEffect(() => {
-    setPage((currentPage) => Math.min(currentPage, totalPages));
-  }, [totalPages]);
-
-  const paginatedCharacters = useMemo(() => {
-    const start = (page - 1) * ITEMS_PER_PAGE;
-    return filteredCharacters.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredCharacters, page]);
-
-  const canGoPrevious = page > 1;
-  const canGoNext = page < totalPages;
+  if (fatalError) {
+    throw fatalError;
+  }
 
   const renderCards = () => {
     if (isLoading) {
@@ -102,7 +100,7 @@ function Dashboard() {
       );
     }
 
-    if (!paginatedCharacters.length) {
+    if (!characters.length) {
       return (
         <div className="col-span-full border border-[#D4AF37]/30 bg-black/40 p-12 text-center backdrop-blur-md">
           <p className="font-body-md text-body-md uppercase tracking-[0.2em] text-secondary">
@@ -112,9 +110,9 @@ function Dashboard() {
       );
     }
 
-    return paginatedCharacters.map((character) => (
+    return characters.map((character, index) => (
       <article
-        key={character.id}
+        key={character.id || `${character.fullName}-${index}`}
         className="group relative overflow-hidden border border-[#D4AF37]/20 shadow-2xl transition-all duration-500 hover:z-10 hover:scale-105 hover:border-[#D4AF37]/60 hover:shadow-[0_0_15px_rgba(212,175,55,0.3)]"
       >
         <div className="relative aspect-[2/3] w-full">
@@ -124,17 +122,17 @@ function Dashboard() {
             className="h-full w-full object-cover object-top"
             loading="lazy"
           />
-
-          <div className="absolute inset-0 z-10 bg-[linear-gradient(to_top,rgba(11,12,16,0.98)_0%,rgba(11,12,16,0.8)_38%,rgba(11,12,16,0.15)_72%,rgba(11,12,16,0)_100%)]" />
-
-          <div className="absolute bottom-0 left-0 z-20 w-full border-t border-[#D4AF37]/20 bg-black/40 p-6 backdrop-blur-md">
-            <h3 className="font-headline-md text-headline-md text-primary">{character.fullName || "Unknown Name"}</h3>
+          <div className="absolute inset-0 z-10 bg-[linear-gradient(to_top,#0B0C10_0%,transparent_40%)]" />
+          <div className="absolute bottom-0 left-0 z-20 w-full border-t border-[#D4AF37]/20 bg-black/40 p-5 backdrop-blur-md">
+            <h3 className="font-headline-md text-headline-md text-primary">
+              {character.fullName || "Unknown Name"}
+            </h3>
             <p className="mt-2 font-body-md text-body-md text-secondary uppercase tracking-[0.2em] text-xs">
               {character.title || "No Known Title"}
             </p>
             <div className="mt-4 flex items-center">
               <span className="mr-4 h-[1px] w-8 bg-[#D4AF37]/40" />
-              <span className="font-label-caps text-label-caps text-silver-400">
+              <span className="font-body-md text-[11px] uppercase tracking-[0.16em] text-silver-400">
                 {character.family || "Unknown Family"}
               </span>
             </div>
@@ -151,7 +149,7 @@ function Dashboard() {
           Directory of Thrones
         </div>
 
-        <nav className="hidden items-center gap-8 font-cinzel uppercase tracking-[0.2em] lg:flex">
+        <nav className="flex items-center gap-8 font-cinzel uppercase tracking-[0.2em]">
           {TOP_NAV_LINKS.map((link, index) => (
             <a
               key={link}
@@ -159,29 +157,13 @@ function Dashboard() {
               className={
                 index === 0
                   ? "border-b-2 border-[#D4AF37] pb-1 text-[#D4AF37] transition-colors duration-500"
-                  : "text-gray-400 transition-colors duration-500 hover:text-[#D4AF37]"
+                  : "text-silver-400 transition-colors duration-500 hover:text-[#D4AF37]"
               }
             >
               {link}
             </a>
           ))}
         </nav>
-
-        <div className="flex items-center gap-4 sm:gap-6">
-          <button className="rounded-full p-2 text-gray-400 transition-all duration-400 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37]">
-            <span className="material-symbols-outlined">notifications</span>
-          </button>
-          <button className="rounded-full p-2 text-gray-400 transition-all duration-400 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37]">
-            <span className="material-symbols-outlined">settings</span>
-          </button>
-          <div className="h-10 w-10 overflow-hidden rounded-full border border-[#D4AF37]/40">
-            <img
-              src="https://thronesapi.com/assets/images/jon-snow.jpg"
-              alt="Commander Profile"
-              className="h-full w-full object-cover"
-            />
-          </div>
-        </div>
       </header>
 
       <div className="mx-auto flex max-w-[1440px] pt-24">
@@ -190,7 +172,7 @@ function Dashboard() {
             <div className="font-body-md text-lg font-black uppercase tracking-widest text-[#D4AF37]">
               Seven Kingdoms
             </div>
-            <div className="mt-1 font-body-md text-[10px] uppercase tracking-widest text-gray-500">
+            <div className="mt-1 font-body-md text-[10px] uppercase tracking-widest text-silver-400/70">
               Westeros Directory
             </div>
           </div>
@@ -204,7 +186,7 @@ function Dashboard() {
                     className={
                       realm.active
                         ? "flex scale-95 items-center border-l-4 border-[#D4AF37] bg-[#D4AF37]/10 px-8 py-4 font-body-md text-xs uppercase tracking-widest text-[#D4AF37] transition-transform active:scale-100"
-                        : "flex scale-95 items-center px-8 py-4 font-body-md text-xs uppercase tracking-widest text-gray-500 transition-transform hover:bg-white/5 hover:text-silver-200 active:scale-100"
+                        : "flex scale-95 items-center px-8 py-4 font-body-md text-xs uppercase tracking-widest text-silver-400/70 transition-transform hover:bg-white/5 hover:text-silver-200 active:scale-100"
                     }
                   >
                     <span className="material-symbols-outlined mr-4">{realm.icon}</span>
@@ -214,21 +196,6 @@ function Dashboard() {
               ))}
             </ul>
           </nav>
-
-          <div className="border-t border-[#D4AF37]/10 p-6">
-            <button className="w-full border border-[#D4AF37] py-4 font-body-md text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] transition-all duration-400 hover:bg-[#D4AF37]/10">
-              Support the Watch
-            </button>
-            <div className="mt-4">
-              <a
-                href="#"
-                className="flex items-center px-2 py-2 font-body-md text-[10px] uppercase tracking-widest text-gray-500 hover:text-[#D4AF37]"
-              >
-                <span className="material-symbols-outlined mr-2 text-sm">auto_stories</span>
-                Archives
-              </a>
-            </div>
-          </div>
         </aside>
 
         <main className="smoke-bg flex-1 bg-surface-dim px-6 pb-section-gap md:px-10 xl:px-container-padding">
@@ -246,11 +213,11 @@ function Dashboard() {
                   setPage(1);
                 }}
                 placeholder="Search the lineages of the Seven Kingdoms..."
-                className="w-full border border-[#D4AF37]/30 bg-black/40 px-8 py-5 font-body-md text-body-md italic text-on-surface backdrop-blur-md transition-all duration-500 placeholder:text-gray-600 focus:border-[#D4AF37] focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
+                className="w-full border border-[#D4AF37]/30 bg-black/40 px-8 py-5 font-body-md text-body-md italic text-silver-400 backdrop-blur-md transition-all duration-500 placeholder:text-silver-400/50 focus:border-[#D4AF37] focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
               />
-              <button className="absolute right-6 top-1/2 -translate-y-1/2 text-primary">
-                <span className="material-symbols-outlined">search</span>
-              </button>
+              <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-primary">
+                search
+              </span>
             </div>
           </section>
 
@@ -263,9 +230,9 @@ function Dashboard() {
           <section className="mx-auto mt-section-gap flex max-w-4xl items-center justify-between">
             <button
               type="button"
-              onClick={() => canGoPrevious && setPage((currentPage) => currentPage - 1)}
-              disabled={!canGoPrevious}
-              className="group flex items-center gap-4 border border-[#D4AF37] px-6 py-4 font-label-caps text-label-caps text-silver-400 transition-all duration-400 hover:bg-[#D4AF37]/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-35 sm:px-10"
+              onClick={() => hasPrevious && setPage((currentPage) => Math.max(1, currentPage - 1))}
+              disabled={!hasPrevious}
+              className="group flex items-center gap-4 border border-[#D4AF37] px-6 py-4 font-body-md text-label-caps text-silver-400 transition-all duration-400 hover:bg-[#D4AF37]/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-35 sm:px-10"
             >
               <span className="material-symbols-outlined text-sm transition-transform group-hover:-translate-x-2">
                 arrow_back_ios
@@ -273,24 +240,11 @@ function Dashboard() {
               Previous Realm
             </button>
 
-            <div className="hidden gap-4 md:flex">
-              {[1, 2, 3].map((dotIndex) => (
-                <span
-                  key={dotIndex}
-                  className={
-                    dotIndex === Math.min(page, 3)
-                      ? "h-2 w-2 rotate-45 bg-[#D4AF37]"
-                      : "h-2 w-2 rotate-45 border border-[#D4AF37]"
-                  }
-                />
-              ))}
-            </div>
-
             <button
               type="button"
-              onClick={() => canGoNext && setPage((currentPage) => currentPage + 1)}
-              disabled={!canGoNext}
-              className="group flex items-center gap-4 border border-[#D4AF37] px-6 py-4 font-label-caps text-label-caps text-silver-400 transition-all duration-400 hover:bg-[#D4AF37]/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-35 sm:px-10"
+              onClick={() => hasNext && setPage((currentPage) => currentPage + 1)}
+              disabled={!hasNext}
+              className="group flex items-center gap-4 border border-[#D4AF37] px-6 py-4 font-body-md text-label-caps text-silver-400 transition-all duration-400 hover:bg-[#D4AF37]/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-35 sm:px-10"
             >
               Next Realm
               <span className="material-symbols-outlined text-sm transition-transform group-hover:translate-x-2">
