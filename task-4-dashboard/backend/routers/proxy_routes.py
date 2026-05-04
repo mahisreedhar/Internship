@@ -219,6 +219,7 @@ def get_characters(
     name: str = Query("", max_length=100),
     gender: str = Query("all", max_length=20),
     culture: str = Query("", max_length=100),
+    cultures: str = Query("", max_length=400),
     aliases: str = Query("", max_length=100),
     born: str = Query("", max_length=100),
     died: str = Query("", max_length=100),
@@ -230,6 +231,8 @@ def get_characters(
     normalized_name = _normalize(name)
     normalized_gender = _normalize(gender)
     normalized_culture = _normalize(culture)
+    normalized_cultures = [value.strip() for value in cultures.split(",") if value.strip()]
+    normalized_cultures = [_normalize(value) for value in normalized_cultures]
     normalized_aliases = _normalize(aliases)
     normalized_born = _normalize(born)
     normalized_died = _normalize(died)
@@ -249,7 +252,16 @@ def get_characters(
             if _normalize(_to_string(character.get("gender"))) == normalized_gender
         ]
 
-    if normalized_culture:
+    if normalized_cultures:
+        filtered_characters = [
+            character
+            for character in filtered_characters
+            if any(
+                selected_culture in _normalize(_to_string(character.get("culture")))
+                for selected_culture in normalized_cultures
+            )
+        ]
+    elif normalized_culture:
         filtered_characters = [
             character
             for character in filtered_characters

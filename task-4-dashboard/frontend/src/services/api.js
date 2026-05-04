@@ -83,6 +83,7 @@ export async function getWesterosCharacters({
   name = "",
   gender = "all",
   culture = "",
+  cultures = [],
   aliases = "",
   born = "",
   died = "",
@@ -106,6 +107,15 @@ export async function getWesterosCharacters({
   const normalizedCulture = culture.trim();
   if (normalizedCulture) {
     params.set("culture", normalizedCulture);
+  }
+
+  if (Array.isArray(cultures) && cultures.length) {
+    const normalizedCultures = cultures
+      .map((value) => (typeof value === "string" ? value.trim() : ""))
+      .filter(Boolean);
+    if (normalizedCultures.length) {
+      params.set("cultures", normalizedCultures.join(","));
+    }
   }
 
   const normalizedAliases = aliases.trim();
