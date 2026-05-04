@@ -1,34 +1,78 @@
 import { useEffect, useMemo, useState } from "react";
-import { getWesterosHouses } from "../services/api";
+import { getWesterosCharacters } from "../services/api";
 
-const REALMS = [
-  { label: "The North", icon: "ac_unit", active: true },
-  { label: "The Reach", icon: "local_florist", active: false },
-  { label: "The Westerlands", icon: "shield", active: false },
-  { label: "The Riverlands", icon: "water_drop", active: false },
-  { label: "The Vale", icon: "terrain", active: false },
+const PAGE_SIZE = 20;
+const SEARCH_DEBOUNCE_MS = 320;
+const INITIAL_TEXT_FILTERS = {
+  name: "",
+  culture: "",
+  aliases: "",
+  born: "",
+  died: "",
+};
+
+const GENDER_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
 ];
 
-const TOP_NAV_LINKS = ["Great Houses", "Characters"];
-const PAGE_SIZE = 10;
+const STATUS_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: "alive", label: "Alive" },
+  { value: "deceased", label: "Deceased" },
+];
 
-function getSigilId(houseName = "") {
-  const normalized = houseName.toLowerCase();
-  if (normalized.includes("stark")) return "stark";
-  if (normalized.includes("lannister")) return "lannister";
-  if (normalized.includes("targaryen")) return "targaryen";
-  if (normalized.includes("baratheon")) return "baratheon";
-  if (normalized.includes("greyjoy")) return "greyjoy";
-  if (normalized.includes("arryn")) return "arryn";
-  if (normalized.includes("martell")) return "martell";
-  if (normalized.includes("tyrell")) return "tyrell";
-  if (normalized.includes("tully")) return "tully";
-  return "generic";
+function firstNonEmpty(list) {
+  if (!Array.isArray(list)) {
+    return "";
+  }
+
+  for (const item of list) {
+    if (typeof item === "string" && item.trim()) {
+      return item.trim();
+    }
+  }
+
+  return "";
+}
+
+function getPrimaryName(character = {}) {
+  const rawName = typeof character.name === "string" ? character.name.trim() : "";
+  if (rawName) {
+    return rawName;
+  }
+
+  const aliasName = firstNonEmpty(character.aliases);
+  return aliasName || "Unknown Soul";
+}
+
+function getInitials(name = "") {
+  const words = name.split(/\s+/).filter(Boolean);
+  if (!words.length) {
+    return "??";
+  }
+
+  if (words.length === 1) {
+    return words[0].slice(0, 2).toUpperCase();
+  }
+
+  return `${words[0][0] || ""}${words[1][0] || ""}`.toUpperCase();
+}
+
+function getPrimaryTitle(character = {}) {
+  const title = firstNonEmpty(character.titles);
+  return title || "No sworn title recorded.";
+}
+
+function getActorName(character = {}) {
+  const actor = firstNonEmpty(character.playedBy);
+  return actor || "Unknown";
 }
 
 function RavenPulse() {
   return (
-    <div className="col-span-full border border-[#D4AF37]/40 bg-black/35 p-12 text-center backdrop-blur-md">
+    <div className="col-span-full border border-[#D4AF37]/60 bg-black/50 p-12 text-center backdrop-blur-md">
       <div className="mx-auto flex w-fit items-center gap-3 text-[#D4AF37] animate-pulse">
         <svg viewBox="0 0 24 24" className="h-8 w-8 fill-current" aria-hidden="true">
           <path d="M3 12c4-2 6-6 9-9l2 1-2 3 3 2 4-1 2 2-3 2 1 3-2 2-2-3-3 1-2 5-2-2 1-3-4-1z" />
@@ -41,14 +85,41 @@ function RavenPulse() {
   );
 }
 
+function FilterOptionButton({ isActive, label, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        isActive
+          ? "border border-[#D4AF37] bg-[#D4AF37]/12 px-3 py-2 font-body-md text-xs uppercase tracking-[0.18em] text-[#D4AF37]"
+          : "border border-[#D4AF37]/35 bg-black/35 px-3 py-2 font-body-md text-xs uppercase tracking-[0.18em] text-[#DDE3EA] transition-colors duration-300 hover:text-[#D4AF37]"
+      }
+    >
+      {label}
+    </button>
+  );
+}
+
 function Dashboard() {
-  const [houses, setHouses] = useState([]);
+  const [characters, setCharacters] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [fatalError, setFatalError] = useState(null);
-  const [query, setQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [hasNext, setHasNext] = useState(false);
+  const [genderFilter, setGenderFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [textFilters, setTextFilters] = useState(INITIAL_TEXT_FILTERS);
+  const [debouncedTextFilters, setDebouncedTextFilters] = useState(INITIAL_TEXT_FILTERS);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: PAGE_SIZE,
+    totalItems: 0,
+    totalFilteredItems: 0,
+    totalPages: 1,
+    hasNext: false,
+    hasPrevious: false,
+  });
 
   useEffect(() => {
     document.documentElement.classList.add("dark");
@@ -56,25 +127,53 @@ function Dashboard() {
   }, []);
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedTextFilters(textFilters);
+      setCurrentPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [textFilters]);
+
+  useEffect(() => {
     let isActive = true;
 
-    const loadHouses = async () => {
+    const loadCharacters = async () => {
       setIsLoading(true);
       setError("");
       setFatalError(null);
 
       try {
-        const result = await getWesterosHouses({
+        const result = await getWesterosCharacters({
           page: currentPage,
           pageSize: PAGE_SIZE,
+          name: debouncedTextFilters.name,
+          gender: genderFilter,
+          culture: debouncedTextFilters.culture,
+          aliases: debouncedTextFilters.aliases,
+          born: debouncedTextFilters.born,
+          died: debouncedTextFilters.died,
+          status: statusFilter,
         });
 
         if (!isActive) {
           return;
         }
 
-        setHouses(result);
-        setHasNext(result.length === PAGE_SIZE);
+        setCharacters(result.items);
+        setPagination({
+          page: result.page,
+          pageSize: result.pageSize,
+          totalItems: result.totalItems,
+          totalFilteredItems: result.totalFilteredItems,
+          totalPages: result.totalPages,
+          hasNext: result.hasNext,
+          hasPrevious: result.hasPrevious,
+        });
+
+        if (result.page !== currentPage) {
+          setCurrentPage(result.page);
+        }
       } catch (err) {
         if (!isActive) {
           return;
@@ -82,8 +181,14 @@ function Dashboard() {
 
         const message = err?.message || "The Ravens are tired. GoT API is down or rate-limited.";
         setError(message);
-        setHouses([]);
-        setHasNext(false);
+        setCharacters([]);
+        setPagination((previous) => ({
+          ...previous,
+          totalFilteredItems: 0,
+          totalPages: 1,
+          hasNext: false,
+          hasPrevious: false,
+        }));
 
         if (err?.status === 503 || message.toLowerCase().includes("ravens are tired")) {
           setFatalError(err instanceof Error ? err : new Error(message));
@@ -95,29 +200,42 @@ function Dashboard() {
       }
     };
 
-    loadHouses();
+    loadCharacters();
 
     return () => {
       isActive = false;
     };
-  }, [currentPage]);
+  }, [currentPage, debouncedTextFilters, genderFilter, statusFilter]);
 
-  const filteredHouses = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) {
-      return houses;
-    }
-
-    return houses.filter((house) => {
-      const name = (house.name || "").toLowerCase();
-      const region = (house.region || "").toLowerCase();
-      return name.includes(normalizedQuery) || region.includes(normalizedQuery);
-    });
-  }, [houses, query]);
+  const hasActiveFilters = useMemo(
+    () =>
+      Boolean(
+        genderFilter !== "all" ||
+          statusFilter !== "all" ||
+          debouncedTextFilters.name ||
+          debouncedTextFilters.culture ||
+          debouncedTextFilters.aliases ||
+          debouncedTextFilters.born ||
+          debouncedTextFilters.died,
+      ),
+    [debouncedTextFilters, genderFilter, statusFilter],
+  );
 
   if (fatalError) {
     throw fatalError;
   }
+
+  const updateTextFilter = (field, value) => {
+    setTextFilters((previous) => ({ ...previous, [field]: value }));
+  };
+
+  const clearFilters = () => {
+    setGenderFilter("all");
+    setStatusFilter("all");
+    setTextFilters(INITIAL_TEXT_FILTERS);
+    setDebouncedTextFilters(INITIAL_TEXT_FILTERS);
+    setCurrentPage(1);
+  };
 
   const renderCards = () => {
     if (isLoading) {
@@ -126,168 +244,239 @@ function Dashboard() {
 
     if (error) {
       return (
-        <div className="col-span-full border border-[#D4AF37]/40 bg-black/35 p-12 text-center backdrop-blur-md">
+        <div className="col-span-full border border-[#D4AF37]/60 bg-black/50 p-12 text-center backdrop-blur-md">
           <p className="font-body-md text-body-md uppercase tracking-[0.2em] text-[#E0E6ED]">{error}</p>
         </div>
       );
     }
 
-    if (!filteredHouses.length) {
+    if (!characters.length) {
       return (
-        <div className="col-span-full border border-[#D4AF37]/40 bg-black/35 p-12 text-center backdrop-blur-md">
-          <p className="font-body-md text-body-md uppercase tracking-[0.2em] text-[#E0E6ED]">
-            No houses found on this page.
+        <div className="col-span-full border border-[#D4AF37]/60 bg-black/50 p-12 text-center backdrop-blur-md">
+          <p className="font-body-md text-body-md uppercase tracking-[0.12em] text-[#E0E6ED]">
+            This soul is not recorded in the Citadel&apos;s scrolls.
           </p>
         </div>
       );
     }
 
-    return filteredHouses.map((house, index) => (
-      <article
-        key={house.url || `${house.name}-${index}`}
-        className="group relative overflow-hidden border border-[#D4AF37]/40 bg-black/35 backdrop-blur-md transition-all duration-500 hover:border-[#D4AF37]/80 hover:shadow-[0_0_18px_rgba(212,175,55,0.25)]"
-      >
-        <div className="relative flex aspect-[2/3] w-full flex-col justify-between p-5">
-          <div className="mx-auto mt-2 flex h-28 w-28 items-center justify-center rounded-full border border-[#D4AF37]/45 bg-[#0B0C10]/80">
-            <svg viewBox="0 0 120 120" className="h-20 w-20 text-[#D4AF37] fill-current">
-              <use href={`/house-sigils.svg#sigil-${getSigilId(house.name)}`} />
-            </svg>
+    return characters.map((character, index) => {
+      const primaryName = getPrimaryName(character);
+      const initials = getInitials(primaryName);
+      const culture = typeof character.culture === "string" && character.culture.trim() ? character.culture : "Unknown";
+      const gender = typeof character.gender === "string" && character.gender.trim() ? character.gender : "Unknown";
+      const aliases = Array.isArray(character.aliases)
+        ? character.aliases.filter((alias) => typeof alias === "string" && alias.trim())
+        : [];
+      const born = typeof character.born === "string" && character.born.trim() ? character.born : "Not recorded";
+      const died = typeof character.died === "string" && character.died.trim() ? character.died : "Alive";
+
+      return (
+        <article
+          key={character.url || `${primaryName}-${index}`}
+          className="flex min-h-[430px] flex-col border border-[#D4AF37] bg-black/50 p-5 backdrop-blur-md transition-all duration-400 hover:shadow-[0_0_16px_rgba(212,175,55,0.2)]"
+        >
+          <div className="mb-4 flex flex-wrap gap-2">
+            <span className="border border-[#DDE3EA]/45 bg-[#DDE3EA]/10 px-2 py-1 font-body-md text-[10px] uppercase tracking-[0.12em] text-[#DDE3EA]">
+              {culture}
+            </span>
+            <span className="border border-[#DDE3EA]/45 bg-[#DDE3EA]/10 px-2 py-1 font-body-md text-[10px] uppercase tracking-[0.12em] text-[#DDE3EA]">
+              {gender}
+            </span>
           </div>
 
-          <div className="absolute inset-x-0 bottom-0 h-36 bg-[linear-gradient(to_top,#0B0C10_0%,transparent_40%)]" />
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full border border-[#D4AF37] bg-black/70">
+            <span className="font-cinzel text-2xl font-bold uppercase tracking-[0.1em] text-[#D4AF37]">{initials}</span>
+          </div>
 
-          <div className="relative z-10 space-y-2">
-            <h3 className="font-headline-md text-headline-md text-[#D4AF37]">
-              {house.name || "Unnamed House"}
-            </h3>
-            <p className="font-body-md text-xs uppercase tracking-[0.18em] text-[#E0E6ED]">
-              {house.region || "Unknown Region"}
+          <h3 className="mb-2 text-center font-cinzel text-lg font-bold uppercase tracking-[0.12em] text-[#D4AF37]">
+            {primaryName}
+          </h3>
+
+          <p className="mb-4 border-l-2 border-[#D4AF37]/70 pl-3 font-cinzel text-sm italic text-[#DDE3EA]">
+            {getPrimaryTitle(character)}
+          </p>
+
+          <div className="space-y-2 font-body-md text-sm text-[#E0E6ED]">
+            <p>
+              <span className="text-[#D4AF37]">Aliases:</span>{" "}
+              {aliases.length ? aliases.slice(0, 3).join(", ") : "None recorded"}
             </p>
-            <p className="max-h-10 overflow-hidden font-body-md text-xs text-[#E0E6ED]/90">
-              {house.coatOfArms || "Coat of arms not listed."}
+            <p>
+              <span className="text-[#D4AF37]">Born:</span> {born}
             </p>
-            <p className="max-h-10 overflow-hidden font-body-md text-xs italic text-[#E0E6ED]/85">
-              {house.words ? `"${house.words}"` : "Words: Not recorded."}
+            <p>
+              <span className="text-[#D4AF37]">Died:</span> {died}
             </p>
           </div>
-        </div>
-      </article>
-    ));
+
+          <p className="mt-auto pt-6 font-body-md text-xs uppercase tracking-[0.12em] text-[#DDE3EA]/65">
+            Actor: {getActorName(character)}
+          </p>
+        </article>
+      );
+    });
   };
 
   return (
     <div className="relative min-h-screen bg-[#0B0C10] text-[#E0E6ED] font-body-md text-body-md">
-      <header className="fixed left-1/2 top-0 z-50 flex h-24 w-full max-w-[1440px] -translate-x-1/2 items-center justify-between border-b border-[#D4AF37]/35 bg-black/80 px-6 shadow-[0_4px_30px_rgba(0,0,0,0.9)] backdrop-blur-xl xl:px-12">
-        <div className="font-cinzel text-lg font-bold uppercase tracking-[0.25em] text-[#D4AF37] sm:text-xl xl:text-2xl">
-          Directory of Thrones
-        </div>
-
-        <nav className="flex items-center gap-8 font-cinzel uppercase tracking-[0.2em]">
-          {TOP_NAV_LINKS.map((link, index) => (
-            <a
-              key={link}
-              href="#"
-              className={
-                index === 0
-                  ? "border-b-2 border-[#D4AF37] pb-1 text-[#D4AF37] transition-colors duration-500"
-                  : "text-[#E0E6ED] transition-colors duration-500 hover:text-[#D4AF37]"
-              }
-            >
-              {link}
-            </a>
-          ))}
-        </nav>
+      <header className="fixed left-1/2 top-0 z-50 flex h-24 w-full max-w-[1440px] -translate-x-1/2 items-center justify-between border-b border-[#D4AF37]/35 bg-black/80 px-6 shadow-[0_4px_30px_rgba(0,0,0,0.9)] backdrop-blur-xl md:px-10 xl:px-14">
+        <h1 className="font-cinzel text-base font-bold uppercase tracking-[0.25em] text-[#D4AF37] sm:text-xl xl:text-2xl">
+          Westeros Character Directory
+        </h1>
       </header>
 
-      <div className="mx-auto flex max-w-[1440px] pt-24">
-        <aside className="sticky top-24 hidden h-[calc(100vh-6rem)] w-64 flex-col border-r border-[#D4AF37]/25 bg-black/85 shadow-2xl backdrop-blur-2xl lg:flex">
-          <div className="border-b border-[#D4AF37]/15 p-8">
-            <div className="font-body-md text-lg font-black uppercase tracking-widest text-[#D4AF37]">
-              Seven Kingdoms
-            </div>
-            <div className="mt-1 font-body-md text-[10px] uppercase tracking-widest text-[#E0E6ED]/70">
-              Westeros Directory
-            </div>
-          </div>
-
-          <nav className="flex-1 py-6">
-            <ul className="space-y-1">
-              {REALMS.map((realm) => (
-                <li key={realm.label}>
-                  <a
-                    href="#"
-                    className={
-                      realm.active
-                        ? "flex scale-95 items-center border-l-4 border-[#D4AF37] bg-[#D4AF37]/10 px-8 py-4 font-body-md text-xs uppercase tracking-widest text-[#D4AF37] transition-transform active:scale-100"
-                        : "flex scale-95 items-center px-8 py-4 font-body-md text-xs uppercase tracking-widest text-[#E0E6ED]/75 transition-transform hover:bg-white/5 hover:text-[#E0E6ED] active:scale-100"
-                    }
-                  >
-                    <span className="material-symbols-outlined mr-4">{realm.icon}</span>
-                    {realm.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </aside>
-
-        <main className="smoke-bg flex-1 bg-[#0B0C10] px-6 pb-section-gap md:px-10 xl:px-container-padding">
-          <section className="flex flex-col items-center justify-center pb-16 pt-24 text-center">
-            <h1 className="mb-element-gap font-headline-xl text-headline-xl text-[#D4AF37]">
-              DIRECTORY OF THRONES
-            </h1>
-
-            <div className="group relative w-full max-w-2xl">
+      <main className="smoke-bg mx-auto w-full max-w-[1440px] px-4 pb-24 pt-28 sm:px-8 md:px-12 xl:px-16 2xl:px-24">
+        <section className="mx-auto mb-8 flex w-full max-w-[1180px] flex-col gap-6 border border-[#D4AF37]/60 bg-black/50 p-5 backdrop-blur-md sm:p-6">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <label className="block">
+              <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Name</span>
               <input
                 type="text"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search house name or region on this page..."
-                className="w-full border border-[#D4AF37]/35 bg-black/40 px-8 py-5 font-body-md text-body-md italic text-[#E0E6ED] backdrop-blur-md transition-all duration-500 placeholder:text-[#E0E6ED]/55 focus:border-[#D4AF37] focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
+                value={textFilters.name}
+                onChange={(event) => updateTextFilter("name", event.target.value)}
+                placeholder="Jon Snow, Arya..."
+                className="w-full border border-[#D4AF37]/35 bg-black/45 px-4 py-3 font-body-md text-sm text-[#E0E6ED] placeholder:text-[#E0E6ED]/55 focus:border-[#D4AF37] focus:outline-none"
               />
-              <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-[#D4AF37]">
-                search
-              </span>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Culture</span>
+              <input
+                type="text"
+                value={textFilters.culture}
+                onChange={(event) => updateTextFilter("culture", event.target.value)}
+                placeholder="Northmen, Valyrian..."
+                className="w-full border border-[#D4AF37]/35 bg-black/45 px-4 py-3 font-body-md text-sm text-[#E0E6ED] placeholder:text-[#E0E6ED]/55 focus:border-[#D4AF37] focus:outline-none"
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <label className="block">
+              <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Aliases</span>
+              <input
+                type="text"
+                value={textFilters.aliases}
+                onChange={(event) => updateTextFilter("aliases", event.target.value)}
+                placeholder="Kingslayer, Lord Snow..."
+                className="w-full border border-[#D4AF37]/35 bg-black/45 px-4 py-3 font-body-md text-sm text-[#E0E6ED] placeholder:text-[#E0E6ED]/55 focus:border-[#D4AF37] focus:outline-none"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Born</span>
+              <input
+                type="text"
+                value={textFilters.born}
+                onChange={(event) => updateTextFilter("born", event.target.value)}
+                placeholder="In 283 AC..."
+                className="w-full border border-[#D4AF37]/35 bg-black/45 px-4 py-3 font-body-md text-sm text-[#E0E6ED] placeholder:text-[#E0E6ED]/55 focus:border-[#D4AF37] focus:outline-none"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Died</span>
+              <input
+                type="text"
+                value={textFilters.died}
+                onChange={(event) => updateTextFilter("died", event.target.value)}
+                placeholder="In 300 AC..."
+                className="w-full border border-[#D4AF37]/35 bg-black/45 px-4 py-3 font-body-md text-sm text-[#E0E6ED] placeholder:text-[#E0E6ED]/55 focus:border-[#D4AF37] focus:outline-none"
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-[1fr_1fr_auto]">
+            <div>
+              <p className="mb-2 font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Gender</p>
+              <div className="flex flex-wrap gap-2">
+                {GENDER_OPTIONS.map((option) => (
+                  <FilterOptionButton
+                    key={option.value}
+                    label={option.label}
+                    isActive={genderFilter === option.value}
+                    onClick={() => {
+                      setGenderFilter(option.value);
+                      setCurrentPage(1);
+                    }}
+                  />
+                ))}
+              </div>
             </div>
-          </section>
 
-          <div className="throne-divider mb-section-gap" />
+            <div>
+              <p className="mb-2 font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Status</p>
+              <div className="flex flex-wrap gap-2">
+                {STATUS_OPTIONS.map((option) => (
+                  <FilterOptionButton
+                    key={option.value}
+                    label={option.label}
+                    isActive={statusFilter === option.value}
+                    onClick={() => {
+                      setStatusFilter(option.value);
+                      setCurrentPage(1);
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
 
-          <section className="grid grid-cols-1 gap-gutter md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-            {renderCards()}
-          </section>
-
-          <section className="mx-auto mt-section-gap flex max-w-4xl items-center justify-between">
             <button
               type="button"
-              onClick={() => setCurrentPage((previous) => Math.max(1, previous - 1))}
-              disabled={currentPage === 1 || isLoading}
-              className="group flex items-center gap-4 border border-[#D4AF37] px-6 py-4 font-body-md text-label-caps text-[#E0E6ED] transition-all duration-400 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-35 sm:px-10"
+              onClick={clearFilters}
+              disabled={!hasActiveFilters}
+              className="h-11 self-end border border-[#D4AF37]/70 px-4 font-body-md text-xs uppercase tracking-[0.18em] text-[#E0E6ED] transition-colors duration-300 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <span className="material-symbols-outlined text-sm transition-transform group-hover:-translate-x-2">
-                arrow_back_ios
-              </span>
-              Previous Realm
+              Clear Filters
             </button>
+          </div>
+        </section>
 
-            <div className="font-body-md text-xs uppercase tracking-[0.18em] text-[#E0E6ED]/80">
-              Page {currentPage}
-            </div>
+        <section className="mx-auto mb-8 flex w-full max-w-[1180px] flex-col gap-3 border border-[#D4AF37]/40 bg-black/40 p-4 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
+          <p className="font-body-md text-xs uppercase tracking-[0.18em] text-[#DDE3EA]">
+            Results: <span className="text-[#D4AF37]">{pagination.totalFilteredItems}</span> of {pagination.totalItems}
+          </p>
+          <p className="font-body-md text-xs uppercase tracking-[0.18em] text-[#DDE3EA]">
+            Page <span className="text-[#D4AF37]">{pagination.page}</span> of {pagination.totalPages} showing {characters.length} of{" "}
+            {pagination.totalFilteredItems}
+          </p>
+        </section>
 
-            <button
-              type="button"
-              onClick={() => hasNext && setCurrentPage((previous) => previous + 1)}
-              disabled={!hasNext || isLoading}
-              className="group flex items-center gap-4 border border-[#D4AF37] px-6 py-4 font-body-md text-label-caps text-[#E0E6ED] transition-all duration-400 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-35 sm:px-10"
-            >
-              Next Realm
-              <span className="material-symbols-outlined text-sm transition-transform group-hover:translate-x-2">
-                arrow_forward_ios
-              </span>
-            </button>
-          </section>
-        </main>
-      </div>
+        <section className="mx-auto grid w-full max-w-[1180px] grid-cols-1 gap-7 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {renderCards()}
+        </section>
+
+        <section className="mx-auto mt-12 flex w-full max-w-[1180px] items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => setCurrentPage((previous) => Math.max(1, previous - 1))}
+            disabled={!pagination.hasPrevious || isLoading}
+            className="group flex items-center gap-3 border border-[#D4AF37] px-5 py-3 font-body-md text-label-caps text-[#E0E6ED] transition-all duration-400 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-35 sm:px-8"
+          >
+            <span className="material-symbols-outlined text-sm transition-transform group-hover:-translate-x-2">
+              arrow_back_ios
+            </span>
+            Previous Realm
+          </button>
+
+          <div className="font-body-md text-xs uppercase tracking-[0.18em] text-[#E0E6ED]/80">
+            {pagination.page} / {pagination.totalPages}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => pagination.hasNext && setCurrentPage((previous) => previous + 1)}
+            disabled={!pagination.hasNext || isLoading}
+            className="group flex items-center gap-3 border border-[#D4AF37] px-5 py-3 font-body-md text-label-caps text-[#E0E6ED] transition-all duration-400 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-35 sm:px-8"
+          >
+            Next Realm
+            <span className="material-symbols-outlined text-sm transition-transform group-hover:translate-x-2">
+              arrow_forward_ios
+            </span>
+          </button>
+        </section>
+      </main>
     </div>
   );
 }
