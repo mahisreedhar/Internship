@@ -212,13 +212,13 @@ function Dashboard() {
       Boolean(
         genderFilter !== "all" ||
           statusFilter !== "all" ||
-          debouncedTextFilters.name ||
-          debouncedTextFilters.culture ||
-          debouncedTextFilters.aliases ||
-          debouncedTextFilters.born ||
-          debouncedTextFilters.died,
+          textFilters.name ||
+          textFilters.culture ||
+          textFilters.aliases ||
+          textFilters.born ||
+          textFilters.died,
       ),
-    [debouncedTextFilters, genderFilter, statusFilter],
+    [genderFilter, statusFilter, textFilters],
   );
 
   if (fatalError) {
