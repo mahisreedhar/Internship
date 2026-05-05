@@ -27,7 +27,6 @@ const CULTURE_OPTIONS = [
   "Valyrian",
   "Braavosi",
   "Dornish",
-  "Dornishmen",
   "Ghiscari",
   "Dothraki",
   "Free Folk",
@@ -41,7 +40,7 @@ const REGION_PRESETS = [
   { id: "all", label: "All Realms", cultures: [] },
   { id: "north", label: "The North", cultures: ["Northmen"] },
   { id: "iron-islands", label: "The Iron Islands", cultures: ["Ironborn"] },
-  { id: "dorne", label: "Dorne", cultures: ["Dornish", "Dornishmen"] },
+  { id: "dorne", label: "Dorne", cultures: ["Dornish"] },
   { id: "westerlands", label: "The Westerlands", cultures: ["Westerlands", "Andal"] },
   { id: "essos", label: "Free Cities & Essos", cultures: ["Braavosi", "Valyrian", "Ghiscari", "Dothraki"] },
 ];
@@ -457,7 +456,7 @@ function Dashboard() {
                   className="flex w-full items-center justify-between border border-[#D4AF37]/70 bg-black/55 px-4 py-3 font-body-md text-sm text-[#E0E6ED]"
                 >
                   <span>
-                    Culture {selectedCultures.length ? `• Selected (${selectedCultures.length})` : "• All"}
+                    Culture {selectedCultures.length ? `- Selected (${selectedCultures.length})` : "- All"}
                   </span>
                   <span className="material-symbols-outlined text-base" aria-hidden="true">
                     {isCultureMenuOpen ? "expand_less" : "expand_more"}
@@ -627,3 +626,4 @@ function Dashboard() {
 }
 
 export default Dashboard;
+

@@ -2,6 +2,7 @@ from math import ceil
 from threading import Lock
 from time import time
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 import requests
 from fastapi import APIRouter, HTTPException, Query
@@ -43,6 +44,11 @@ def _is_character_alive(character: dict[str, Any]) -> bool:
     return not bool(_to_string(character.get("died")).strip())
 
 
+def _normalize_culture(value: str | None) -> str:
+    normalized = _normalize(value)
+    return "dornish" if normalized in {"dornish", "dornishmen"} else normalized
+
+
 def _character_primary_name(character: dict[str, Any]) -> str:
     primary_name = _to_string(character.get("name")).strip()
     if primary_name:
@@ -65,6 +71,20 @@ def _character_aliases_text(character: dict[str, Any]) -> str:
 
     normalized_aliases = [_to_string(alias).strip() for alias in aliases]
     return " ".join(alias for alias in normalized_aliases if alias)
+
+
+def _parse_last_page(links: dict[str, Any], fallback_page: int) -> int:
+    last_link = links.get("last", {}).get("url")
+    if not last_link:
+        return fallback_page
+
+    try:
+        query_values = parse_qs(urlparse(last_link).query)
+        last_page_value = query_values.get("page", [str(fallback_page)])[0]
+        parsed_last_page = int(last_page_value)
+        return parsed_last_page if parsed_last_page >= 1 else fallback_page
+    except (TypeError, ValueError):
+        return fallback_page
 
 
 def _fetch_houses_page(page: int) -> list[dict[str, Any]]:
@@ -131,6 +151,30 @@ def _fetch_characters_page(page: int) -> list[dict[str, Any]]:
         raise _raven_exception()
 
     return payload if isinstance(payload, list) else []
+
+
+def _fetch_characters_page_with_links(
+    page: int,
+    page_size: int,
+    extra_params: dict[str, str] | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    params: dict[str, Any] = {"page": page, "pageSize": page_size}
+    if extra_params:
+        params.update(extra_params)
+
+    try:
+        response = requests.get(CHARACTERS_API_URL, params=params, timeout=10)
+
+        if response.status_code == 429:
+            raise _raven_exception()
+
+        response.raise_for_status()
+        payload = response.json()
+    except requests.RequestException:
+        raise _raven_exception()
+
+    items = payload if isinstance(payload, list) else []
+    return items, response.links
 
 
 def _get_all_characters() -> list[dict[str, Any]]:
@@ -225,18 +269,75 @@ def get_characters(
     died: str = Query("", max_length=100),
     status: str = Query("all", pattern="^(all|alive|deceased)$"),
 ):
-    characters = _get_all_characters()
-    filtered_characters = characters
-
     normalized_name = _normalize(name)
     normalized_gender = _normalize(gender)
     normalized_culture = _normalize(culture)
     normalized_cultures = [value.strip() for value in cultures.split(",") if value.strip()]
-    normalized_cultures = [_normalize(value) for value in normalized_cultures]
+    normalized_cultures = [_normalize_culture(value) for value in normalized_cultures]
+    normalized_cultures = list(dict.fromkeys(normalized_cultures))
     normalized_aliases = _normalize(aliases)
     normalized_born = _normalize(born)
     normalized_died = _normalize(died)
     normalized_status = _normalize(status)
+    is_dornish_selected = "dornish" in normalized_cultures
+
+    can_use_fast_path = not any(
+        [
+            normalized_name,
+            normalized_aliases,
+            normalized_born,
+            normalized_died,
+            normalized_culture,
+            len(normalized_cultures) > 1,
+            is_dornish_selected,
+        ]
+    )
+
+    if can_use_fast_path:
+        upstream_params: dict[str, str] = {}
+
+        if normalized_gender and normalized_gender != "all":
+            upstream_params["gender"] = normalized_gender
+
+        if normalized_status == "alive":
+            upstream_params["isAlive"] = "true"
+        elif normalized_status == "deceased":
+            upstream_params["isAlive"] = "false"
+
+        if len(normalized_cultures) == 1:
+            upstream_params["culture"] = normalized_cultures[0]
+
+        page_items, page_links = _fetch_characters_page_with_links(page, page_size, upstream_params)
+        total_pages = _parse_last_page(page_links, page)
+        clamped_page = min(page, total_pages)
+
+        if clamped_page != page:
+            page_items, page_links = _fetch_characters_page_with_links(clamped_page, page_size, upstream_params)
+            total_pages = _parse_last_page(page_links, clamped_page)
+
+        last_page_items = page_items
+        if total_pages > clamped_page:
+            last_page_items, _ = _fetch_characters_page_with_links(total_pages, page_size, upstream_params)
+
+        total_filtered_items = (
+            0 if total_pages <= 0 else ((total_pages - 1) * page_size + len(last_page_items))
+        )
+        has_next = clamped_page < total_pages
+        has_previous = clamped_page > 1
+
+        return {
+            "items": page_items,
+            "page": clamped_page,
+            "page_size": page_size,
+            "total_items": total_filtered_items,
+            "total_filtered_items": total_filtered_items,
+            "total_pages": total_pages if total_pages > 0 else 1,
+            "has_next": has_next,
+            "has_previous": has_previous,
+        }
+
+    characters = _get_all_characters()
+    filtered_characters = characters
 
     if normalized_name:
         filtered_characters = [
@@ -256,16 +357,14 @@ def get_characters(
         filtered_characters = [
             character
             for character in filtered_characters
-            if any(
-                selected_culture in _normalize(_to_string(character.get("culture")))
-                for selected_culture in normalized_cultures
-            )
+            if _normalize_culture(_to_string(character.get("culture"))) in normalized_cultures
         ]
     elif normalized_culture:
+        canonical_culture = _normalize_culture(normalized_culture)
         filtered_characters = [
             character
             for character in filtered_characters
-            if normalized_culture in _normalize(_to_string(character.get("culture")))
+            if canonical_culture in _normalize_culture(_to_string(character.get("culture")))
         ]
 
     if normalized_aliases:
