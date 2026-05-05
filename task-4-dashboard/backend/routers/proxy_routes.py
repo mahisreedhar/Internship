@@ -33,15 +33,6 @@ def _normalize_culture(value: str | None) -> str:
     return "dornish" if normalized in {"dornish", "dornishmen"} else normalized
 
 
-def _character_aliases_text(character: dict[str, Any]) -> str:
-    aliases = character.get("aliases")
-    if not isinstance(aliases, list):
-        return ""
-
-    normalized_aliases = [_to_string(alias).strip() for alias in aliases]
-    return " ".join(alias for alias in normalized_aliases if alias)
-
-
 def _parse_last_page(links: dict[str, Any], fallback_page: int) -> int:
     last_link = links.get("last", {}).get("url")
     if not last_link:
@@ -195,7 +186,6 @@ def get_characters(
     gender: str = Query("all", max_length=20),
     culture: str = Query("", max_length=100),
     cultures: str = Query("", max_length=400),
-    aliases: str = Query("", max_length=100),
     born: str = Query("", max_length=100),
     died: str = Query("", max_length=100),
     status: str = Query("all", pattern="^(all|alive|deceased)$"),
@@ -206,7 +196,6 @@ def get_characters(
     normalized_cultures = [value.strip() for value in cultures.split(",") if value.strip()]
     normalized_cultures = [_normalize_culture(value) for value in normalized_cultures]
     normalized_cultures = list(dict.fromkeys(normalized_cultures))
-    normalized_aliases = _normalize(aliases)
     normalized_born = _normalize(born)
     normalized_died = _normalize(died)
     normalized_status = _normalize(status)
@@ -258,13 +247,6 @@ def get_characters(
             character
             for character in page_items
             if _normalize_culture(_to_string(character.get("culture"))) in normalized_cultures
-        ]
-
-    if normalized_aliases:
-        page_items = [
-            character
-            for character in page_items
-            if normalized_aliases in _normalize(_character_aliases_text(character))
         ]
 
     total_items = _get_total_items_for_query(
