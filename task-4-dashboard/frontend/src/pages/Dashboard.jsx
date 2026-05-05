@@ -5,7 +5,6 @@ const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 320;
 const INITIAL_TEXT_FILTERS = {
   name: "",
-  aliases: "",
   born: "",
   died: "",
 };
@@ -212,7 +211,6 @@ function Dashboard() {
           name: debouncedTextFilters.name,
           gender: genderFilter,
           cultures: selectedCultures,
-          aliases: debouncedTextFilters.aliases,
           born: debouncedTextFilters.born,
           died: debouncedTextFilters.died,
           status: statusFilter,
@@ -280,7 +278,6 @@ function Dashboard() {
           statusFilter !== "all" ||
           selectedCultures.length ||
           textFilters.name ||
-          textFilters.aliases ||
           textFilters.born ||
           textFilters.died,
       ),
@@ -355,9 +352,6 @@ function Dashboard() {
       const initials = getInitials(primaryName);
       const culture = typeof character.culture === "string" && character.culture.trim() ? character.culture : "Unknown";
       const gender = typeof character.gender === "string" && character.gender.trim() ? character.gender : "Unknown";
-      const aliases = Array.isArray(character.aliases)
-        ? character.aliases.filter((alias) => typeof alias === "string" && alias.trim())
-        : [];
       const born = typeof character.born === "string" && character.born.trim() ? character.born : "Not recorded";
       const died = typeof character.died === "string" && character.died.trim() ? character.died : "Alive";
 
@@ -389,10 +383,6 @@ function Dashboard() {
           </p>
 
           <div className="space-y-2 font-body-md text-sm text-[#E0E6ED]">
-            <p>
-              <span className="text-[#D4AF37]">Aliases:</span>{" "}
-              {aliases.length ? aliases.slice(0, 3).join(", ") : "None recorded"}
-            </p>
             <p>
               <span className="text-[#D4AF37]">Born:</span> {born}
             </p>
@@ -517,18 +507,7 @@ function Dashboard() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <label className="block">
-                <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Aliases</span>
-                <input
-                  type="text"
-                  value={textFilters.aliases}
-                  onChange={(event) => updateTextFilter("aliases", event.target.value)}
-                  placeholder="Kingslayer, Lord Snow..."
-                  className="w-full border border-[#D4AF37]/35 bg-black/45 px-4 py-3 font-body-md text-sm text-[#E0E6ED] placeholder:text-[#E0E6ED]/55 focus:border-[#D4AF37] focus:outline-none"
-                />
-              </label>
-
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <label className="block">
                 <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Born</span>
                 <input
