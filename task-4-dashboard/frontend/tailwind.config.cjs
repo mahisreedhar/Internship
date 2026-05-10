@@ -72,12 +72,12 @@ module.exports = {
       },
       fontFamily: {
         'label-caps': ['Ubuntu', 'sans-serif'],
-        'headline-md': ['"Cinzel Decorative"', 'serif'],
+        'headline-md': ['Poppins', 'sans-serif'],
         'body-lg': ['Ubuntu', 'sans-serif'],
         'body-md': ['Ubuntu', 'sans-serif'],
-        'headline-lg': ['"Cinzel Decorative"', 'serif'],
-        'headline-xl': ['"Cinzel Decorative"', 'serif'],
-        cinzel: ['Cinzel', 'serif'],
+        'headline-lg': ['Poppins', 'sans-serif'],
+        'headline-xl': ['Poppins', 'sans-serif'],
+        cinzel: ['Poppins', 'sans-serif'],
       },
       fontSize: {
         'label-caps': ['12px', { lineHeight: '1.0', letterSpacing: '0.2em', fontWeight: '500' }],

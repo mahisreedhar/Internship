@@ -18,24 +18,24 @@ const GENERATION_PRESETS = [
 ];
 
 const TYPE_COLORS = {
-  normal: "#7a7a6a",
-  fire: "#b34200",
-  water: "#1a56b0",
-  electric: "#b08a00",
-  grass: "#2a6b24",
-  ice: "#00727a",
-  fighting: "#8a1e1a",
-  poison: "#561880",
-  ground: "#6e5b0e",
-  flying: "#362090",
-  psychic: "#9c1e42",
-  bug: "#455e14",
-  rock: "#6a5620",
-  ghost: "#38206e",
-  dragon: "#101e88",
-  dark: "#2e343a",
-  steel: "#445560",
-  fairy: "#961858",
+  normal: "#A8A77A",
+  fire: "#EE8130",
+  water: "#6390F0",
+  electric: "#F7D02C",
+  grass: "#7AC74C",
+  ice: "#96D9D6",
+  fighting: "#C22E28",
+  poison: "#A33EA1",
+  ground: "#E2BF65",
+  flying: "#A98FF3",
+  psychic: "#F95587",
+  bug: "#A6B91A",
+  rock: "#B6A136",
+  ghost: "#735797",
+  dragon: "#6F35FC",
+  dark: "#705746",
+  steel: "#B7B7CE",
+  fairy: "#D685AD",
 };
 
 const TYPE_OPTIONS = Object.keys(TYPE_COLORS);
@@ -45,44 +45,44 @@ function PokeBallPulse() {
     <div className="col-span-full flex flex-col items-center justify-center py-24">
       <div className="relative h-16 w-16 animate-spin">
         <svg viewBox="0 0 100 100" className="h-full w-full" aria-hidden="true">
-          <circle cx="50" cy="50" r="40" fill="none" stroke="#0B0C10" strokeWidth="5" />
-          <path d="M 10 50 A 40 40 0 0 1 90 50 Z" fill="#dc2626" />
-          <path d="M 10 50 A 40 40 0 0 0 90 50 Z" fill="#f8fafc" />
-          <line x1="10" y1="50" x2="90" y2="50" stroke="#0B0C10" strokeWidth="6" />
-          <circle cx="50" cy="50" r="10" fill="#f8fafc" stroke="#0B0C10" strokeWidth="5" />
-          <circle cx="50" cy="50" r="4" fill="#0B0C10" />
+          <circle cx="50" cy="50" r="40" fill="none" stroke="#111827" strokeWidth="5" />
+          <path d="M 10 50 A 40 40 0 0 1 90 50 Z" fill="#FF0000" />
+          <path d="M 10 50 A 40 40 0 0 0 90 50 Z" fill="#FFFFFF" />
+          <line x1="10" y1="50" x2="90" y2="50" stroke="#111827" strokeWidth="6" />
+          <circle cx="50" cy="50" r="10" fill="#FFFFFF" stroke="#111827" strokeWidth="5" />
+          <circle cx="50" cy="50" r="4" fill="#111827" />
         </svg>
       </div>
-      <p className="mt-6 font-cinzel text-xs uppercase tracking-[0.25em] text-[#E0E6ED]/70">Loading Pokedex...</p>
+      <p className="mt-6 font-cinzel text-xs uppercase tracking-[0.25em] text-[#3C5AA6]/75">Loading Pokedex...</p>
     </div>
   );
 }
 
 function TypeFilterDropdown({ selectedTypes, onToggleType }) {
   return (
-    <details className="group relative w-full sm:max-w-[320px]">
-      <summary className="flex h-11 cursor-pointer list-none items-center justify-between border border-[#D4AF37]/35 bg-black/45 px-4 font-body-md text-sm text-[#E0E6ED] marker:content-none">
+    <details className="group relative z-50 w-full">
+      <summary className="flex h-11 cursor-pointer list-none items-center justify-between rounded-lg border border-[#2A75BB]/40 bg-white px-4 font-body-md text-sm text-[#1F2937] shadow-sm marker:content-none focus:outline-none">
         <span>{selectedTypes.length ? `${selectedTypes.length} Type Filter(s)` : "Filter by Type"}</span>
-        <span className="text-xs text-[#D4AF37] transition-transform group-open:rotate-180">v</span>
+        <span className="text-xs font-semibold text-[#2A75BB] transition-transform group-open:rotate-180">v</span>
       </summary>
 
-      <div className="absolute z-40 mt-2 grid max-h-64 w-full grid-cols-2 gap-2 overflow-y-auto border border-[#D4AF37]/45 bg-[#0F1117] p-3 shadow-[0_14px_30px_rgba(0,0,0,0.45)] sm:grid-cols-3">
+      <div className="absolute left-0 top-full z-[90] mt-2 grid max-h-64 w-full grid-cols-2 gap-2 overflow-y-auto rounded-lg border border-[#2A75BB]/55 bg-white p-3 shadow-xl sm:grid-cols-3">
         {TYPE_OPTIONS.map((typeName) => {
           const checked = selectedTypes.includes(typeName);
           return (
             <label
               key={typeName}
-              className="flex cursor-pointer items-center gap-2 rounded-md border border-transparent px-2 py-1 text-xs uppercase tracking-[0.1em] text-[#DDE3EA] hover:border-[#D4AF37]/25 hover:bg-white/5"
+              className="flex cursor-pointer items-center gap-2 rounded-md border border-transparent px-2 py-1 text-xs uppercase tracking-[0.1em] text-[#1F2937] hover:border-[#2A75BB]/25 hover:bg-[#F3F4F6]"
             >
               <input
                 type="checkbox"
                 checked={checked}
                 onChange={() => onToggleType(typeName)}
-                className="h-3.5 w-3.5 accent-[#D4AF37]"
+                className="h-3.5 w-3.5 accent-[#2A75BB]"
               />
               <span
-                className="rounded px-1.5 py-0.5 text-[10px]"
-                style={{ backgroundColor: TYPE_COLORS[typeName], color: "#F9FAFB" }}
+                className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-white"
+                style={{ backgroundColor: TYPE_COLORS[typeName] ?? "#3C5AA6" }}
               >
                 {typeName}
               </span>
@@ -218,16 +218,16 @@ function Dashboard() {
 
     if (error) {
       return (
-        <div className="col-span-full rounded-xl border border-[#D4AF37]/60 bg-black/50 p-12 text-center backdrop-blur-md">
-          <p className="font-body-md text-sm uppercase tracking-[0.2em] text-[#E0E6ED]">{error}</p>
+        <div className="col-span-full rounded-xl border border-[#FF0000]/45 bg-[#FFF1F2] p-12 text-center">
+          <p className="font-body-md text-sm uppercase tracking-[0.2em] text-[#991B1B]">{error}</p>
         </div>
       );
     }
 
     if (!data.items.length) {
       return (
-        <div className="col-span-full rounded-xl border border-[#D4AF37]/60 bg-black/50 p-12 text-center backdrop-blur-md">
-          <p className="font-body-md text-sm uppercase tracking-[0.12em] text-[#E0E6ED]">No Pokemon match your filter set.</p>
+        <div className="col-span-full rounded-xl border border-[#2A75BB]/35 bg-white p-12 text-center shadow-sm">
+          <p className="font-body-md text-sm uppercase tracking-[0.12em] text-[#3C5AA6]">No Pokemon match your filter set.</p>
         </div>
       );
     }
@@ -236,7 +236,7 @@ function Dashboard() {
       <article
         key={pokemon.id}
         style={{ animationDelay: `${index * 55}ms` }}
-        className="stagger-card group relative flex min-h-[410px] flex-col overflow-hidden rounded-xl border border-[#1e2030] bg-[#101216] transition-all duration-400 hover:-translate-y-1 hover:border-[#D4AF37]/60 hover:shadow-[0_14px_30px_rgba(0,0,0,0.45)]"
+        className="stagger-card group relative flex min-h-[410px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-md transition-all duration-400 hover:-translate-y-1 hover:border-[#2A75BB]/40 hover:shadow-lg"
       >
         <div className="absolute inset-0">
           <div className="absolute inset-0 flex items-center justify-center p-6">
@@ -249,14 +249,14 @@ function Dashboard() {
               />
             ) : null}
           </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0B0C10] via-[#0B0C10]/45 to-[#0B0C10]/5" />
+          <div className="absolute inset-0 bg-white/0" />
         </div>
 
-        <div className="relative z-10 mt-auto p-5">
-          <p className="mb-2 font-body-md text-base font-semibold tracking-[0.06em] text-[#D5D7DC]">
+        <div className="relative z-10 mt-auto rounded-t-2xl bg-white/95 p-5">
+          <p className="mb-2 font-body-md text-base font-semibold tracking-[0.06em] text-[#3C5AA6]">
             #{String(pokemon.id).padStart(4, "0")}
           </p>
-          <h3 className="mb-3 font-cinzel text-3xl font-bold leading-none tracking-[0.04em] text-[#F4F5F7]">
+          <h3 className="mb-3 font-cinzel text-3xl font-black leading-none tracking-[0.02em] text-[#3C5AA6]">
             {pokemon.name}
           </h3>
 
@@ -264,7 +264,7 @@ function Dashboard() {
             {pokemon.types.map((typeName) => (
               <span
                 key={typeName}
-                style={{ backgroundColor: TYPE_COLORS[typeName] ?? "#555" }}
+                style={{ backgroundColor: TYPE_COLORS[typeName] ?? "#2A75BB" }}
                 className="rounded-md px-3 py-1 font-body-md text-xs font-semibold uppercase tracking-[0.08em] text-white"
               >
                 {typeName}
@@ -272,7 +272,7 @@ function Dashboard() {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-3 border-t border-white/10 pt-3 font-body-md text-xs uppercase tracking-[0.1em] text-[#DDE3EA]/80">
+          <div className="grid grid-cols-2 gap-3 border-t border-slate-200 pt-3 font-body-md text-xs uppercase tracking-[0.1em] text-[#334155]">
             <p>Weight: {(pokemon.weight / 10).toFixed(1)} kg</p>
             <p>Height: {(pokemon.height / 10).toFixed(1)} m</p>
           </div>
@@ -282,38 +282,38 @@ function Dashboard() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#0B0C10] text-[#E0E6ED] font-body-md text-body-md">
-      <header className="fixed left-1/2 top-0 z-50 flex h-24 w-full max-w-[1600px] -translate-x-1/2 items-center justify-between border-b border-[#D4AF37]/35 bg-black/80 px-6 shadow-[0_4px_30px_rgba(0,0,0,0.9)] backdrop-blur-xl md:px-10 xl:px-14">
-        <h1 className="font-cinzel text-base font-bold uppercase tracking-[0.25em] text-[#D4AF37] sm:text-xl xl:text-2xl">
+    <div className="relative min-h-screen bg-[#F3F4F6] text-[#1F2937] font-body-md text-body-md">
+      <header className="fixed left-1/2 top-0 z-50 flex h-24 w-full max-w-[1600px] -translate-x-1/2 items-center justify-between border-b border-[#FFCB05]/80 bg-[#3C5AA6] px-6 shadow-md md:px-10 xl:px-14">
+        <h1 className="font-cinzel text-base font-black uppercase tracking-[0.18em] text-[#FFCB05] sm:text-xl xl:text-2xl">
           Pokedex Dashboard
         </h1>
         {data.total_items > 0 && (
-          <p className="hidden font-body-md text-[11px] uppercase tracking-[0.2em] text-[#DDE3EA]/50 sm:block">
+          <p className="hidden font-body-md text-[11px] uppercase tracking-[0.18em] text-[#FFCB05]/90 sm:block">
             {data.total_items.toLocaleString()} results
           </p>
         )}
       </header>
 
       <main className="smoke-bg mx-auto w-full max-w-[1600px] px-4 pb-24 pt-28 sm:px-8 md:px-12 xl:px-14">
-        <section className="mx-auto mb-8 flex w-full max-w-[1480px] flex-col gap-5 rounded-xl border border-[#D4AF37]/60 bg-black/50 p-5 backdrop-blur-md sm:p-6">
+        <section className="relative z-40 mx-auto mb-8 flex w-full max-w-[1480px] flex-col gap-5 rounded-xl border border-[#2A75BB]/30 bg-white p-5 shadow-md sm:p-6">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
             <label className="block lg:col-span-2">
-              <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Name Search</span>
+              <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.18em] text-[#3C5AA6]">Name Search</span>
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Pikachu, Bulba..."
-                className="h-11 w-full border border-[#D4AF37]/35 bg-black/45 px-4 font-body-md text-sm text-[#E0E6ED] placeholder:text-[#E0E6ED]/55 focus:border-[#D4AF37] focus:outline-none"
+                className="h-11 w-full rounded-lg border border-[#2A75BB]/40 bg-white px-4 font-body-md text-sm text-[#1F2937] placeholder:text-slate-400 shadow-sm focus:border-[#2A75BB] focus:outline-none"
               />
             </label>
 
             <label className="block">
-              <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Generation</span>
+              <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.18em] text-[#3C5AA6]">Generation</span>
               <select
                 value={activeGeneration}
                 onChange={onGenerationChange}
-                className="h-11 w-full border border-[#D4AF37]/35 bg-black/45 px-4 font-body-md text-sm text-[#E0E6ED] focus:border-[#D4AF37] focus:outline-none"
+                className="h-11 w-full rounded-lg border border-[#2A75BB]/40 bg-white px-4 font-body-md text-sm text-[#1F2937] shadow-sm focus:border-[#2A75BB] focus:outline-none"
               >
                 {GENERATION_PRESETS.map((gen) => (
                   <option key={gen.id} value={gen.id}>
@@ -324,14 +324,14 @@ function Dashboard() {
             </label>
 
             <div className="block">
-              <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Type</span>
+              <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.18em] text-[#3C5AA6]">Type</span>
               <TypeFilterDropdown selectedTypes={selectedTypes} onToggleType={onToggleType} />
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <label className="block">
-              <span className="mb-2 block font-cinzel text-[10px] uppercase tracking-[0.2em] text-[#D4AF37]">Dex ID Min</span>
+              <span className="mb-2 block font-cinzel text-[10px] uppercase tracking-[0.18em] text-[#3C5AA6]">Dex ID Min</span>
               <input
                 type="number"
                 min="1"
@@ -339,12 +339,12 @@ function Dashboard() {
                 value={minId}
                 onChange={onMinIdChange}
                 placeholder="1"
-                className="h-11 w-full border border-[#D4AF37]/35 bg-black/45 px-4 font-body-md text-sm text-[#E0E6ED] focus:border-[#D4AF37] focus:outline-none"
+                className="h-11 w-full rounded-lg border border-[#2A75BB]/40 bg-white px-4 font-body-md text-sm text-[#1F2937] shadow-sm focus:border-[#2A75BB] focus:outline-none"
               />
             </label>
 
             <label className="block">
-              <span className="mb-2 block font-cinzel text-[10px] uppercase tracking-[0.2em] text-[#D4AF37]">Dex ID Max</span>
+              <span className="mb-2 block font-cinzel text-[10px] uppercase tracking-[0.18em] text-[#3C5AA6]">Dex ID Max</span>
               <input
                 type="number"
                 min="1"
@@ -352,7 +352,7 @@ function Dashboard() {
                 value={maxId}
                 onChange={onMaxIdChange}
                 placeholder="1025"
-                className="h-11 w-full border border-[#D4AF37]/35 bg-black/45 px-4 font-body-md text-sm text-[#E0E6ED] focus:border-[#D4AF37] focus:outline-none"
+                className="h-11 w-full rounded-lg border border-[#2A75BB]/40 bg-white px-4 font-body-md text-sm text-[#1F2937] shadow-sm focus:border-[#2A75BB] focus:outline-none"
               />
             </label>
 
@@ -361,7 +361,7 @@ function Dashboard() {
                 type="button"
                 onClick={clearFilters}
                 disabled={!hasActiveFilters}
-                className="h-11 w-full border border-[#D4AF37]/70 px-4 font-body-md text-xs uppercase tracking-[0.18em] text-[#E0E6ED] transition-colors duration-300 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-11 w-full rounded-lg border border-[#FF0000] bg-[#FF0000] px-4 font-body-md text-xs uppercase tracking-[0.16em] text-white transition-colors duration-300 hover:bg-[#C70000] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Clear Filters
               </button>
@@ -369,16 +369,16 @@ function Dashboard() {
           </div>
         </section>
 
-        <section className="mx-auto mb-8 flex w-full max-w-[1480px] flex-col gap-3 rounded-xl border border-[#D4AF37]/40 bg-black/40 p-4 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-body-md text-xs uppercase tracking-[0.18em] text-[#DDE3EA]">
-            Total: <span className="text-[#D4AF37]">{data.total_items.toLocaleString()}</span> Pokemon
+        <section className="relative z-20 mx-auto mb-8 flex w-full max-w-[1480px] flex-col gap-3 rounded-xl border border-[#2A75BB]/25 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <p className="font-body-md text-xs uppercase tracking-[0.16em] text-[#334155]">
+            Total: <span className="text-[#3C5AA6] font-semibold">{data.total_items.toLocaleString()}</span> Pokemon
           </p>
-          <p className="font-body-md text-xs uppercase tracking-[0.18em] text-[#DDE3EA]">
-            Page <span className="text-[#D4AF37]">{data.page}</span> of {totalPages}
+          <p className="font-body-md text-xs uppercase tracking-[0.16em] text-[#334155]">
+            Page <span className="text-[#3C5AA6] font-semibold">{data.page}</span> of {totalPages}
           </p>
         </section>
 
-        <section className="mx-auto grid w-full max-w-[1480px] grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        <section className="relative z-10 mx-auto grid w-full max-w-[1480px] grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {renderCards()}
         </section>
 
@@ -387,13 +387,13 @@ function Dashboard() {
             type="button"
             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
             disabled={currentPage <= 1 || isLoading}
-            className="group flex items-center gap-3 border border-[#D4AF37] px-5 py-3 font-body-md text-label-caps text-[#E0E6ED] transition-all duration-400 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 sm:px-8"
+            className="group flex items-center gap-3 rounded-lg border border-[#FFCB05] bg-[#FFCB05] px-5 py-3 font-body-md text-label-caps text-[#3C5AA6] transition-all duration-300 hover:bg-[#F2B800] active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 sm:px-8"
           >
-            <span className="material-symbols-outlined text-sm transition-transform group-hover:-translate-x-2">arrow_back_ios</span>
+            <span className="material-symbols-outlined text-sm transition-transform group-hover:-translate-x-1">arrow_back_ios</span>
             Previous Page
           </button>
 
-          <div className="font-body-md text-xs uppercase tracking-[0.18em] text-[#E0E6ED]/80">
+          <div className="font-body-md text-xs uppercase tracking-[0.16em] text-[#3C5AA6]">
             {data.page} / {totalPages}
           </div>
 
@@ -401,10 +401,10 @@ function Dashboard() {
             type="button"
             onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
             disabled={currentPage >= totalPages || isLoading}
-            className="group flex items-center gap-3 border border-[#D4AF37] px-5 py-3 font-body-md text-label-caps text-[#E0E6ED] transition-all duration-400 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 sm:px-8"
+            className="group flex items-center gap-3 rounded-lg border border-[#FFCB05] bg-[#FFCB05] px-5 py-3 font-body-md text-label-caps text-[#3C5AA6] transition-all duration-300 hover:bg-[#F2B800] active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 sm:px-8"
           >
             Next Page
-            <span className="material-symbols-outlined text-sm transition-transform group-hover:translate-x-2">arrow_forward_ios</span>
+            <span className="material-symbols-outlined text-sm transition-transform group-hover:translate-x-1">arrow_forward_ios</span>
           </button>
         </section>
       </main>
