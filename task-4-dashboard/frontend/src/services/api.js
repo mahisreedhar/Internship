@@ -14,8 +14,7 @@ export async function fetchPokemon({
   search = "",
   generation = 0,
   types = [],
-  minId,
-  maxId,
+  sortBy = "dex_id",
 } = {}) {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
 
@@ -31,12 +30,8 @@ export async function fetchPokemon({
     params.set("types", types.join(","));
   }
 
-  if (Number.isFinite(minId)) {
-    params.set("minId", String(minId));
-  }
-
-  if (Number.isFinite(maxId)) {
-    params.set("maxId", String(maxId));
+  if (sortBy) {
+    params.set("sortBy", sortBy);
   }
 
   let response;

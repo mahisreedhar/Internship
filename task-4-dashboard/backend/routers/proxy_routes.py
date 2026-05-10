@@ -168,17 +168,13 @@ async def get_pokemon(
     search: str = Query("", max_length=100),
     generation: int = Query(0, ge=0, le=9),
     types: str = Query("", max_length=200),
-    min_id: int = Query(1, ge=1, le=1025, alias="minId"),
-    max_id: int = Query(1025, ge=1, le=1025, alias="maxId"),
+    sort_by: str = Query("dex_id", alias="sortBy"),
 ):
     if not _master_pokemon_index:
         raise HTTPException(
             status_code=503,
             detail="Pokedex index is not available yet. Please retry in a moment.",
         )
-
-    if min_id > max_id:
-        raise HTTPException(status_code=422, detail="minId cannot be greater than maxId.")
 
     filtered: list[dict[str, Any]] = _master_pokemon_index
 
@@ -192,15 +188,21 @@ async def get_pokemon(
         term = search.strip().lower()
         filtered = [p for p in filtered if term in p["name"].lower()]
 
-    # Dex ID range metadata filter.
-    filtered = [p for p in filtered if min_id <= p["id"] <= max_id]
-
     # Type checkbox filter (OR across selected types).
     selected_types = _parse_types_filter(types)
     if selected_types:
         type_id_sets = await asyncio.gather(*[_load_type_ids(type_name) for type_name in selected_types])
         allowed_ids = set().union(*type_id_sets)
         filtered = [p for p in filtered if p["id"] in allowed_ids]
+
+    if sort_by == "name_asc":
+        filtered = sorted(filtered, key=lambda p: p["name"])
+    elif sort_by == "name_desc":
+        filtered = sorted(filtered, key=lambda p: p["name"], reverse=True)
+    elif sort_by == "dex_id":
+        filtered = sorted(filtered, key=lambda p: p["id"])
+    else:
+        raise HTTPException(status_code=422, detail="Invalid sortBy value.")
 
     total_items = len(filtered)
     start = (page - 1) * page_size

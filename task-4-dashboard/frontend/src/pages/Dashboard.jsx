@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { fetchPokemon } from "../services/api";
 
 const PAGE_SIZE = 20;
@@ -39,6 +39,11 @@ const TYPE_COLORS = {
 };
 
 const TYPE_OPTIONS = Object.keys(TYPE_COLORS);
+const SORT_OPTIONS = [
+  { value: "dex_id", label: "Dex ID" },
+  { value: "name_asc", label: "Name (A-Z)" },
+  { value: "name_desc", label: "Name (Z-A)" },
+];
 
 function PokeBallPulse() {
   return (
@@ -104,18 +109,7 @@ function Dashboard() {
 
   const [activeGeneration, setActiveGeneration] = useState(0);
   const [selectedTypes, setSelectedTypes] = useState([]);
-  const [minId, setMinId] = useState("");
-  const [maxId, setMaxId] = useState("");
-
-  const parsedMinId = useMemo(() => {
-    const value = Number(minId);
-    return Number.isFinite(value) && value >= 1 ? value : undefined;
-  }, [minId]);
-
-  const parsedMaxId = useMemo(() => {
-    const value = Number(maxId);
-    return Number.isFinite(value) && value >= 1 ? value : undefined;
-  }, [maxId]);
+  const [sortBy, setSortBy] = useState("dex_id");
 
   // Dark mode
   useEffect(() => {
@@ -149,8 +143,7 @@ function Dashboard() {
       search: debouncedSearchTerm,
       generation: activeGeneration,
       types: selectedTypes,
-      minId: parsedMinId,
-      maxId: parsedMaxId,
+      sortBy,
     })
       .then((result) => {
         if (isActive) setData(result);
@@ -168,23 +161,21 @@ function Dashboard() {
     return () => {
       isActive = false;
     };
-  }, [currentPage, debouncedSearchTerm, activeGeneration, selectedTypes, parsedMinId, parsedMaxId]);
+  }, [currentPage, debouncedSearchTerm, activeGeneration, selectedTypes, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(data.total_items / PAGE_SIZE));
   const hasActiveFilters =
     activeGeneration !== 0 ||
     searchTerm.trim().length > 0 ||
     selectedTypes.length > 0 ||
-    minId.trim().length > 0 ||
-    maxId.trim().length > 0;
+    sortBy !== "dex_id";
 
   const clearFilters = () => {
     setSearchTerm("");
     setDebouncedSearchTerm("");
     setActiveGeneration(0);
     setSelectedTypes([]);
-    setMinId("");
-    setMaxId("");
+    setSortBy("dex_id");
     setCurrentPage(1);
   };
 
@@ -203,13 +194,8 @@ function Dashboard() {
     setCurrentPage(1);
   };
 
-  const onMinIdChange = (event) => {
-    setMinId(event.target.value);
-    setCurrentPage(1);
-  };
-
-  const onMaxIdChange = (event) => {
-    setMaxId(event.target.value);
+  const onSortByChange = (event) => {
+    setSortBy(event.target.value);
     setCurrentPage(1);
   };
 
@@ -236,23 +222,20 @@ function Dashboard() {
       <article
         key={pokemon.id}
         style={{ animationDelay: `${index * 55}ms` }}
-        className="stagger-card group relative flex min-h-[410px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-md transition-all duration-400 hover:-translate-y-1 hover:border-[#2A75BB]/40 hover:shadow-lg"
+        className="stagger-card group relative flex min-h-[540px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-md transition-all duration-400 hover:-translate-y-1 hover:border-[#2A75BB]/40 hover:shadow-lg"
       >
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 flex items-center justify-center p-6">
-            {pokemon.image ? (
-              <img
-                src={pokemon.image}
-                alt={pokemon.name}
-                className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
-                loading="lazy"
-              />
-            ) : null}
-          </div>
-          <div className="absolute inset-0 bg-white/0" />
+        <div className="flex h-[340px] items-end justify-center p-6 pb-2">
+          {pokemon.image ? (
+            <img
+              src={pokemon.image}
+              alt={pokemon.name}
+              className="h-full w-full object-contain object-bottom transition-transform duration-500 group-hover:scale-105"
+              loading="lazy"
+            />
+          ) : null}
         </div>
 
-        <div className="relative z-10 mt-auto rounded-t-2xl bg-white/95 p-5">
+        <div className="mt-auto rounded-t-2xl border-t border-slate-200 bg-white p-5">
           <p className="mb-2 font-body-md text-base font-semibold tracking-[0.06em] text-[#3C5AA6]">
             #{String(pokemon.id).padStart(4, "0")}
           </p>
@@ -296,7 +279,7 @@ function Dashboard() {
 
       <main className="smoke-bg mx-auto w-full max-w-[1600px] px-4 pb-24 pt-28 sm:px-8 md:px-12 xl:px-14">
         <section className="relative z-40 mx-auto mb-8 flex w-full max-w-[1480px] flex-col gap-5 rounded-xl border border-[#2A75BB]/30 bg-white p-5 shadow-md sm:p-6">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
             <label className="block lg:col-span-2">
               <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.18em] text-[#3C5AA6]">Name Search</span>
               <input
@@ -323,40 +306,29 @@ function Dashboard() {
               </select>
             </label>
 
+            <label className="block">
+              <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.18em] text-[#3C5AA6]">Sort By</span>
+              <select
+                value={sortBy}
+                onChange={onSortByChange}
+                className="h-11 w-full rounded-lg border border-[#2A75BB]/40 bg-white px-4 font-body-md text-sm text-[#1F2937] shadow-sm focus:border-[#2A75BB] focus:outline-none"
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <div className="block">
               <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.18em] text-[#3C5AA6]">Type</span>
               <TypeFilterDropdown selectedTypes={selectedTypes} onToggleType={onToggleType} />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <label className="block">
-              <span className="mb-2 block font-cinzel text-[10px] uppercase tracking-[0.18em] text-[#3C5AA6]">Dex ID Min</span>
-              <input
-                type="number"
-                min="1"
-                max="1025"
-                value={minId}
-                onChange={onMinIdChange}
-                placeholder="1"
-                className="h-11 w-full rounded-lg border border-[#2A75BB]/40 bg-white px-4 font-body-md text-sm text-[#1F2937] shadow-sm focus:border-[#2A75BB] focus:outline-none"
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-2 block font-cinzel text-[10px] uppercase tracking-[0.18em] text-[#3C5AA6]">Dex ID Max</span>
-              <input
-                type="number"
-                min="1"
-                max="1025"
-                value={maxId}
-                onChange={onMaxIdChange}
-                placeholder="1025"
-                className="h-11 w-full rounded-lg border border-[#2A75BB]/40 bg-white px-4 font-body-md text-sm text-[#1F2937] shadow-sm focus:border-[#2A75BB] focus:outline-none"
-              />
-            </label>
-
-            <div className="flex items-end">
+          <div className="flex justify-end">
+            <div className="w-full sm:w-56">
               <button
                 type="button"
                 onClick={clearFilters}
