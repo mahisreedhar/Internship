@@ -1,6 +1,22 @@
-const BFF_BASE = "http://localhost:8000";
+const RAW_API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+const API_BASE = RAW_API_BASE.replace(/\/$/, "");
 
-export async function fetchPokemon({ page = 1, pageSize = 20, search = "", generation = 0 } = {}) {
+function buildUrl(pathWithQuery) {
+  if (API_BASE) {
+    return `${API_BASE}${pathWithQuery}`;
+  }
+  return pathWithQuery;
+}
+
+export async function fetchPokemon({
+  page = 1,
+  pageSize = 20,
+  search = "",
+  generation = 0,
+  types = [],
+  minId,
+  maxId,
+} = {}) {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
 
   if (search.trim()) {
@@ -11,11 +27,23 @@ export async function fetchPokemon({ page = 1, pageSize = 20, search = "", gener
     params.set("generation", String(generation));
   }
 
+  if (Array.isArray(types) && types.length > 0) {
+    params.set("types", types.join(","));
+  }
+
+  if (Number.isFinite(minId)) {
+    params.set("minId", String(minId));
+  }
+
+  if (Number.isFinite(maxId)) {
+    params.set("maxId", String(maxId));
+  }
+
   let response;
   try {
-    response = await fetch(`${BFF_BASE}/api/pokemon?${params}`);
+    response = await fetch(buildUrl(`/api/pokemon?${params}`));
   } catch {
-    const err = new Error("Cannot reach the Pokémon API server. Is the backend running?");
+    const err = new Error("Cannot reach the Pokemon API server. Is the backend running?");
     err.status = 503;
     throw err;
   }

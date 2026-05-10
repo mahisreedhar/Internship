@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -5,18 +6,29 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from routers.proxy_routes import load_master_index, router as proxy_router
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await load_master_index()
+    try:
+        await load_master_index()
+    except Exception:
+        logger.exception("Failed to preload Pokemon index at startup.")
     yield
 
 
-app = FastAPI(title="Pokémon BFF API", lifespan=lifespan)
+app = FastAPI(title="Pokedex BFF API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+    ],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
