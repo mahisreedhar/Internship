@@ -1,433 +1,254 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { getWesterosCharacters } from "../services/api";
+import { useEffect, useRef, useState } from "react";
+import { fetchPokemon } from "../services/api";
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 320;
-const INITIAL_TEXT_FILTERS = {
-  name: "",
-  born: "",
-  died: "",
+
+const GENERATION_PRESETS = [
+  { id: 0, label: "All Pokémon" },
+  { id: 1, label: "Generation I — Kanto" },
+  { id: 2, label: "Generation II — Johto" },
+  { id: 3, label: "Generation III — Hoenn" },
+  { id: 4, label: "Generation IV — Sinnoh" },
+  { id: 5, label: "Generation V — Unova" },
+  { id: 6, label: "Generation VI — Kalos" },
+  { id: 7, label: "Generation VII — Alola" },
+  { id: 8, label: "Generation VIII — Galar" },
+  { id: 9, label: "Generation IX — Paldea" },
+];
+
+const TYPE_COLORS = {
+  normal:   "#7a7a6a",
+  fire:     "#b34200",
+  water:    "#1a56b0",
+  electric: "#b08a00",
+  grass:    "#2a6b24",
+  ice:      "#00727a",
+  fighting: "#8a1e1a",
+  poison:   "#561880",
+  ground:   "#6e5b0e",
+  flying:   "#362090",
+  psychic:  "#9c1e42",
+  bug:      "#455e14",
+  rock:     "#6a5620",
+  ghost:    "#38206e",
+  dragon:   "#101e88",
+  dark:     "#2e343a",
+  steel:    "#445560",
+  fairy:    "#961858",
 };
 
-const GENDER_OPTIONS = [
-  { value: "all", label: "All" },
-  { value: "male", label: "Male" },
-  { value: "female", label: "Female" },
-];
-
-const STATUS_OPTIONS = [
-  { value: "all", label: "All" },
-  { value: "alive", label: "Alive" },
-  { value: "deceased", label: "Deceased" },
-];
-
-const CULTURE_OPTIONS = [
-  "Northmen",
-  "Ironborn",
-  "Valyrian",
-  "Braavosi",
-  "Dornish",
-  "Ghiscari",
-  "Dothraki",
-  "Free Folk",
-  "Andal",
-  "First Men",
-  "Riverlands",
-  "Westerlands",
-];
-
-const REGION_PRESETS = [
-  { id: "all", label: "All Realms", cultures: [] },
-  { id: "north", label: "The North", cultures: ["Northmen"] },
-  { id: "iron-islands", label: "The Iron Islands", cultures: ["Ironborn"] },
-  { id: "dorne", label: "Dorne", cultures: ["Dornish"] },
-  { id: "westerlands", label: "The Westerlands", cultures: ["Westerlands", "Andal"] },
-  { id: "essos", label: "Free Cities & Essos", cultures: ["Braavosi", "Valyrian", "Ghiscari", "Dothraki"] },
-];
-
-function firstNonEmpty(list) {
-  if (!Array.isArray(list)) {
-    return "";
-  }
-
-  for (const item of list) {
-    if (typeof item === "string" && item.trim()) {
-      return item.trim();
-    }
-  }
-
-  return "";
-}
-
-function getPrimaryName(character = {}) {
-  const rawName = typeof character.name === "string" ? character.name.trim() : "";
-  if (rawName) {
-    return rawName;
-  }
-
-  const aliasName = firstNonEmpty(character.aliases);
-  return aliasName || "Unknown Soul";
-}
-
-function getInitials(name = "") {
-  const words = name.split(/\s+/).filter(Boolean);
-  if (!words.length) {
-    return "??";
-  }
-
-  if (words.length === 1) {
-    return words[0].slice(0, 2).toUpperCase();
-  }
-
-  return `${words[0][0] || ""}${words[1][0] || ""}`.toUpperCase();
-}
-
-function getPrimaryTitle(character = {}) {
-  const title = firstNonEmpty(character.titles);
-  return title || "No sworn title recorded.";
-}
-
-function getActorName(character = {}) {
-  const actor = firstNonEmpty(character.playedBy);
-  return actor || "Unknown";
-}
-
-function matchesPreset(selectedCultures, presetCultures) {
-  if (selectedCultures.length !== presetCultures.length) {
-    return false;
-  }
-
-  const selected = new Set(selectedCultures.map((value) => value.toLowerCase()));
-  return presetCultures.every((value) => selected.has(value.toLowerCase()));
-}
-
-function findRegionForCultures(selectedCultures) {
-  for (const preset of REGION_PRESETS) {
-    if (matchesPreset(selectedCultures, preset.cultures)) {
-      return preset.id;
-    }
-  }
-
-  return "custom";
-}
-
-function RavenPulse() {
+function PokeBallPulse() {
   return (
-    <div className="col-span-full border border-[#D4AF37]/60 bg-black/50 p-12 text-center backdrop-blur-md">
-      <div className="mx-auto flex w-fit items-center gap-3 text-[#D4AF37] animate-pulse">
-        <svg viewBox="0 0 24 24" className="h-8 w-8 fill-current" aria-hidden="true">
-          <path d="M3 12c4-2 6-6 9-9l2 1-2 3 3 2 4-1 2 2-3 2 1 3-2 2-2-3-3 1-2 5-2-2 1-3-4-1z" />
+    <div className="col-span-full flex flex-col items-center justify-center py-24">
+      <div className="relative h-16 w-16 animate-spin">
+        <svg viewBox="0 0 100 100" className="h-full w-full" aria-hidden="true">
+          <circle cx="50" cy="50" r="40" fill="none" stroke="#D4AF37" strokeWidth="5" />
+          <path d="M 10 50 A 40 40 0 0 1 90 50 Z" fill="#D4AF37" />
+          <path d="M 10 50 A 40 40 0 0 0 90 50 Z" fill="#1a1c22" />
+          <line x1="10" y1="50" x2="90" y2="50" stroke="#0B0C10" strokeWidth="5" />
+          <circle cx="50" cy="50" r="9" fill="#1a1c22" stroke="#0B0C10" strokeWidth="4" />
+          <circle cx="50" cy="50" r="5" fill="#D4AF37" />
         </svg>
-        <span className="font-headline-md text-headline-md uppercase tracking-widest">
-          Raven Relay In Flight...
-        </span>
       </div>
+      <p className="mt-6 font-cinzel text-xs uppercase tracking-[0.25em] text-[#D4AF37]/70">
+        Loading Pokédex...
+      </p>
     </div>
   );
 }
 
-function FilterOptionButton({ isActive, label, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={
-        isActive
-          ? "border border-[#D4AF37] bg-[#D4AF37]/12 px-3 py-2 font-body-md text-xs uppercase tracking-[0.18em] text-[#D4AF37]"
-          : "border border-[#D4AF37]/35 bg-black/35 px-3 py-2 font-body-md text-xs uppercase tracking-[0.18em] text-[#DDE3EA] transition-colors duration-300 hover:text-[#D4AF37]"
-      }
-    >
-      {label}
-    </button>
-  );
-}
-
 function Dashboard() {
-  const [characters, setCharacters] = useState([]);
+  const [data, setData] = useState({ items: [], total_items: 0, page: 1, page_size: PAGE_SIZE });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [fatalError, setFatalError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [genderFilter, setGenderFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [textFilters, setTextFilters] = useState(INITIAL_TEXT_FILTERS);
-  const [debouncedTextFilters, setDebouncedTextFilters] = useState(INITIAL_TEXT_FILTERS);
-  const [selectedCultures, setSelectedCultures] = useState([]);
-  const [isCultureMenuOpen, setIsCultureMenuOpen] = useState(false);
-  const [activeRegion, setActiveRegion] = useState("all");
-  const cultureMenuRef = useRef(null);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    pageSize: PAGE_SIZE,
-    totalItems: 0,
-    totalFilteredItems: 0,
-    totalPages: 1,
-    hasNext: false,
-    hasPrevious: false,
-  });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [activeGeneration, setActiveGeneration] = useState(0);
 
+  // Dark mode
   useEffect(() => {
     document.documentElement.classList.add("dark");
     return () => document.documentElement.classList.remove("dark");
   }, []);
 
+  // Scroll to top on page change
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [currentPage]);
 
-  useEffect(() => {
-    const handleOutsideClick = (event) => {
-      if (cultureMenuRef.current && !cultureMenuRef.current.contains(event.target)) {
-        setIsCultureMenuOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, []);
-
+  // Debounce search — resets page to 1
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      setDebouncedTextFilters(textFilters);
+      setDebouncedSearchTerm(searchTerm);
       setCurrentPage(1);
     }, SEARCH_DEBOUNCE_MS);
-
     return () => window.clearTimeout(timer);
-  }, [textFilters]);
+  }, [searchTerm]);
 
+  // Main fetch effect — triggers on page, search, or generation change
   useEffect(() => {
     let isActive = true;
+    setIsLoading(true);
+    setError("");
 
-    const loadCharacters = async () => {
-      setIsLoading(true);
-      setError("");
-      setFatalError(null);
-
-      try {
-        const result = await getWesterosCharacters({
-          page: currentPage,
-          pageSize: PAGE_SIZE,
-          name: debouncedTextFilters.name,
-          gender: genderFilter,
-          cultures: selectedCultures,
-          born: debouncedTextFilters.born,
-          died: debouncedTextFilters.died,
-          status: statusFilter,
-        });
-
-        if (!isActive) {
-          return;
-        }
-
-        setCharacters(result.items);
-        setPagination({
-          page: result.page,
-          pageSize: result.pageSize,
-          totalItems: result.totalItems,
-          totalFilteredItems: result.totalFilteredItems,
-          totalPages: result.totalPages,
-          hasNext: result.hasNext,
-          hasPrevious: result.hasPrevious,
-        });
-
-        if (result.page !== currentPage) {
-          setCurrentPage(result.page);
-        }
-      } catch (err) {
-        if (!isActive) {
-          return;
-        }
-
-        const message = err?.message || "The Ravens are tired. GoT API is down or rate-limited.";
-        setError(message);
-        setCharacters([]);
-        setPagination((previous) => ({
-          ...previous,
-          totalFilteredItems: 0,
-          totalPages: 1,
-          hasNext: false,
-          hasPrevious: false,
-        }));
-
-        if (err?.status === 503 || message.toLowerCase().includes("ravens are tired")) {
-          setFatalError(err instanceof Error ? err : new Error(message));
-        }
-      } finally {
+    fetchPokemon({
+      page: currentPage,
+      pageSize: PAGE_SIZE,
+      search: debouncedSearchTerm,
+      generation: activeGeneration,
+    })
+      .then((result) => {
+        if (isActive) setData(result);
+      })
+      .catch((err) => {
         if (isActive) {
-          setIsLoading(false);
+          setError(err.message || "Failed to load Pokémon data.");
+          setData({ items: [], total_items: 0, page: currentPage, page_size: PAGE_SIZE });
         }
-      }
-    };
-
-    loadCharacters();
+      })
+      .finally(() => {
+        if (isActive) setIsLoading(false);
+      });
 
     return () => {
       isActive = false;
     };
-  }, [currentPage, debouncedTextFilters, genderFilter, selectedCultures, statusFilter]);
+  }, [currentPage, debouncedSearchTerm, activeGeneration]);
 
-  useEffect(() => {
-    setActiveRegion(findRegionForCultures(selectedCultures));
-  }, [selectedCultures]);
+  const totalPages = Math.max(1, Math.ceil(data.total_items / PAGE_SIZE));
+  const hasActiveFilters = Boolean(activeGeneration !== 0 || searchTerm);
 
-  const hasActiveFilters = useMemo(
-    () =>
-      Boolean(
-        genderFilter !== "all" ||
-          statusFilter !== "all" ||
-          selectedCultures.length ||
-          textFilters.name ||
-          textFilters.born ||
-          textFilters.died,
-      ),
-    [genderFilter, selectedCultures, statusFilter, textFilters],
-  );
-
-  if (fatalError) {
-    throw fatalError;
-  }
-
-  const updateTextFilter = (field, value) => {
-    setTextFilters((previous) => ({ ...previous, [field]: value }));
-  };
-
-  const onRegionSelect = (region) => {
-    setActiveRegion(region.id);
-    setSelectedCultures(region.cultures);
-    setCurrentPage(1);
-  };
-
-  const onCultureToggle = (culture) => {
-    setSelectedCultures((previous) => {
-      const exists = previous.some((value) => value.toLowerCase() === culture.toLowerCase());
-      if (exists) {
-        return previous.filter((value) => value.toLowerCase() !== culture.toLowerCase());
-      }
-
-      return [...previous, culture];
-    });
-    setCurrentPage(1);
-  };
-
-  const clearCultureFilters = () => {
-    setSelectedCultures([]);
+  const onGenerationSelect = (gen) => {
+    setActiveGeneration(gen.id);
     setCurrentPage(1);
   };
 
   const clearFilters = () => {
-    setGenderFilter("all");
-    setStatusFilter("all");
-    setTextFilters(INITIAL_TEXT_FILTERS);
-    setDebouncedTextFilters(INITIAL_TEXT_FILTERS);
-    setSelectedCultures([]);
+    setSearchTerm("");
+    setDebouncedSearchTerm("");
+    setActiveGeneration(0);
     setCurrentPage(1);
   };
 
   const renderCards = () => {
-    if (isLoading) {
-      return <RavenPulse />;
-    }
+    if (isLoading) return <PokeBallPulse />;
 
     if (error) {
       return (
         <div className="col-span-full border border-[#D4AF37]/60 bg-black/50 p-12 text-center backdrop-blur-md">
-          <p className="font-body-md text-body-md uppercase tracking-[0.2em] text-[#E0E6ED]">{error}</p>
+          <p className="font-body-md text-sm uppercase tracking-[0.2em] text-[#E0E6ED]">{error}</p>
         </div>
       );
     }
 
-    if (!characters.length) {
+    if (!data.items.length) {
       return (
         <div className="col-span-full border border-[#D4AF37]/60 bg-black/50 p-12 text-center backdrop-blur-md">
-          <p className="font-body-md text-body-md uppercase tracking-[0.12em] text-[#E0E6ED]">
-            This soul is not recorded in the Citadel&apos;s scrolls.
+          <p className="font-body-md text-sm uppercase tracking-[0.12em] text-[#E0E6ED]">
+            No Pokémon match your search.
           </p>
         </div>
       );
     }
 
-    return characters.map((character, index) => {
-      const primaryName = getPrimaryName(character);
-      const initials = getInitials(primaryName);
-      const culture = typeof character.culture === "string" && character.culture.trim() ? character.culture : "Unknown";
-      const gender = typeof character.gender === "string" && character.gender.trim() ? character.gender : "Unknown";
-      const born = typeof character.born === "string" && character.born.trim() ? character.born : "Not recorded";
-      const died = typeof character.died === "string" && character.died.trim() ? character.died : "Alive";
+    return data.items.map((pokemon, index) => (
+      <article
+        key={pokemon.id}
+        style={{ animationDelay: `${index * 55}ms` }}
+        className="stagger-card group relative flex min-h-[380px] cursor-pointer flex-col overflow-hidden border border-[#1e2030] bg-[#101216] transition-all duration-400 hover:border-[#D4AF37]/60 hover:shadow-[0_0_20px_rgba(212,175,55,0.25)]"
+      >
+        {/* Official artwork background */}
+        <div className="absolute inset-0">
+          {pokemon.image ? (
+            <div
+              className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+              style={{ backgroundImage: `url(${pokemon.image})` }}
+            />
+          ) : null}
+          {/* Bottom-to-top gradient for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0B0C10]/95 via-[#0B0C10]/50 to-[#0B0C10]/10" />
+        </div>
 
-      return (
-        <article
-          key={character.url || `${primaryName}-${index}`}
-          style={{ animationDelay: `${index * 55}ms` }}
-          className="stagger-card group flex min-h-[430px] cursor-pointer flex-col border border-[#D4AF37] bg-black/50 p-5 backdrop-blur-md transition-all duration-400 hover:bg-[#101216]/65 hover:shadow-[0_0_15px_rgba(212,175,55,0.4)]"
-        >
-          <div className="mb-4 flex flex-wrap gap-2">
-            <span className="border border-[#DDE3EA]/45 bg-[#DDE3EA]/10 px-2 py-1 font-body-md text-[10px] uppercase tracking-[0.12em] text-[#DDE3EA]">
-              {culture}
+        {/* Type badges — top left */}
+        <div className="relative z-10 flex flex-wrap gap-1.5 p-3">
+          {pokemon.types.map((typeName) => (
+            <span
+              key={typeName}
+              style={{ backgroundColor: TYPE_COLORS[typeName] ?? "#555" }}
+              className="rounded-sm px-2 py-0.5 font-body-md text-[10px] font-medium uppercase tracking-[0.1em] text-white/90"
+            >
+              {typeName}
             </span>
-            <span className="border border-[#DDE3EA]/45 bg-[#DDE3EA]/10 px-2 py-1 font-body-md text-[10px] uppercase tracking-[0.12em] text-[#DDE3EA]">
-              {gender}
-            </span>
-          </div>
+          ))}
+        </div>
 
-          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full border border-[#D4AF37] bg-black/70">
-            <span className="font-cinzel text-2xl font-bold uppercase tracking-[0.1em] text-[#D4AF37]">{initials}</span>
-          </div>
-
-          <h3 className="mb-2 text-center font-cinzel text-lg font-bold uppercase tracking-[0.12em] text-[#D4AF37]">
-            {primaryName}
+        {/* Bottom content */}
+        <div className="relative z-10 mt-auto p-4">
+          <h3 className="mb-2 font-cinzel text-xl font-bold uppercase tracking-[0.12em] text-[#D4AF37]">
+            {pokemon.name}
           </h3>
-
-          <p className="mb-4 border-l-2 border-[#D4AF37]/70 pl-3 font-cinzel text-sm italic text-[#DDE3EA]">
-            {getPrimaryTitle(character)}
-          </p>
-
-          <div className="space-y-2 font-body-md text-sm text-[#E0E6ED]">
+          <div className="space-y-0.5 font-body-md text-sm text-[#DDE3EA]/70">
             <p>
-              <span className="text-[#D4AF37]">Born:</span> {born}
+              <span className="text-[#D4AF37]/80">ID:</span>{" "}
+              <span className="text-[#DDE3EA]">#{String(pokemon.id).padStart(3, "0")}</span>
             </p>
             <p>
-              <span className="text-[#D4AF37]">Died:</span> {died}
+              <span className="text-[#D4AF37]/80">Weight:</span>{" "}
+              <span className="text-[#DDE3EA]">{pokemon.weight / 10} kg</span>
+            </p>
+            <p>
+              <span className="text-[#D4AF37]/80">Height:</span>{" "}
+              <span className="text-[#DDE3EA]">{pokemon.height / 10} m</span>
             </p>
           </div>
-
-          <p className="mt-auto pt-6 font-body-md text-xs uppercase tracking-[0.12em] text-[#DDE3EA]/65">
-            Actor: {getActorName(character)}
-          </p>
-        </article>
-      );
-    });
+        </div>
+      </article>
+    ));
   };
 
   return (
     <div className="relative min-h-screen bg-[#0B0C10] text-[#E0E6ED] font-body-md text-body-md">
+      {/* Header */}
       <header className="fixed left-1/2 top-0 z-50 flex h-24 w-full max-w-[1440px] -translate-x-1/2 items-center justify-between border-b border-[#D4AF37]/35 bg-black/80 px-6 shadow-[0_4px_30px_rgba(0,0,0,0.9)] backdrop-blur-xl md:px-10 xl:px-14">
         <h1 className="font-cinzel text-base font-bold uppercase tracking-[0.25em] text-[#D4AF37] sm:text-xl xl:text-2xl">
-          Westeros Character Directory
+          Pokédex Dashboard
         </h1>
+        {data.total_items > 0 && (
+          <p className="hidden font-body-md text-[11px] uppercase tracking-[0.2em] text-[#DDE3EA]/50 sm:block">
+            {data.total_items.toLocaleString()} results
+          </p>
+        )}
       </header>
 
       <div className="mx-auto flex w-full max-w-[1440px] pt-24">
+        {/* Generation sidebar */}
         <aside className="sticky top-24 hidden h-[calc(100vh-6rem)] w-64 flex-col border-r border-[#D4AF37]/25 bg-black/85 backdrop-blur-2xl lg:flex">
           <div className="border-b border-[#D4AF37]/20 p-6">
-            <p className="font-cinzel text-sm uppercase tracking-[0.2em] text-[#D4AF37]">Seven Kingdoms</p>
-            <p className="mt-2 font-body-md text-[10px] uppercase tracking-[0.2em] text-[#DDE3EA]/70">Region Navigator</p>
+            <p className="font-cinzel text-sm uppercase tracking-[0.2em] text-[#D4AF37]">Generation</p>
+            <p className="mt-2 font-body-md text-[10px] uppercase tracking-[0.2em] text-[#DDE3EA]/70">
+              Regional Navigator
+            </p>
           </div>
-          <nav className="py-4">
-            {REGION_PRESETS.map((region) => {
-              const isActive = activeRegion === region.id;
+          <nav className="overflow-y-auto py-4">
+            {GENERATION_PRESETS.map((gen) => {
+              const isActive = activeGeneration === gen.id;
               return (
                 <button
-                  key={region.id}
+                  key={gen.id}
                   type="button"
-                  onClick={() => onRegionSelect(region)}
+                  onClick={() => onGenerationSelect(gen)}
                   className={
                     isActive
-                      ? "relative flex w-full items-center bg-[#D4AF37]/10 px-5 py-3 text-left font-body-md text-xs uppercase tracking-[0.2em] text-[#D4AF37]"
-                      : "relative flex w-full items-center px-5 py-3 text-left font-body-md text-xs uppercase tracking-[0.2em] text-[#DDE3EA]/80 transition-colors hover:bg-white/5 hover:text-[#D4AF37]"
+                      ? "relative flex w-full items-center bg-[#D4AF37]/10 px-5 py-3 text-left font-body-md text-xs uppercase tracking-[0.18em] text-[#D4AF37]"
+                      : "relative flex w-full items-center px-5 py-3 text-left font-body-md text-xs uppercase tracking-[0.18em] text-[#DDE3EA]/80 transition-colors hover:bg-white/5 hover:text-[#D4AF37]"
                   }
                 >
-                  {isActive ? <span className="absolute left-0 top-0 h-full w-[3px] bg-[#D4AF37]" aria-hidden="true" /> : null}
-                  <span className="pl-2">{region.label}</span>
+                  {isActive ? (
+                    <span className="absolute left-0 top-0 h-full w-[3px] bg-[#D4AF37]" aria-hidden="true" />
+                  ) : null}
+                  <span className="pl-2">{gen.label}</span>
                 </button>
               );
             })}
@@ -435,185 +256,73 @@ function Dashboard() {
         </aside>
 
         <main className="smoke-bg w-full flex-1 px-4 pb-24 pt-6 sm:px-8 md:px-12 xl:px-16 2xl:px-24">
+          {/* Filter panel */}
           <section className="mx-auto mb-8 flex w-full max-w-[1180px] flex-col gap-6 border border-[#D4AF37]/60 bg-black/50 p-5 backdrop-blur-md sm:p-6">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <label className="block">
-                <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Name</span>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+              <label className="block flex-1">
+                <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">
+                  Name Search
+                </span>
                 <input
                   type="text"
-                  value={textFilters.name}
-                  onChange={(event) => updateTextFilter("name", event.target.value)}
-                  placeholder="Jon Snow, Arya..."
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Pikachu, Bulba..."
                   className="w-full border border-[#D4AF37]/35 bg-black/45 px-4 py-3 font-body-md text-sm text-[#E0E6ED] placeholder:text-[#E0E6ED]/55 focus:border-[#D4AF37] focus:outline-none"
                 />
               </label>
-
-              <div className="relative" ref={cultureMenuRef}>
-                <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Culture</span>
-                <button
-                  type="button"
-                  onClick={() => setIsCultureMenuOpen((previous) => !previous)}
-                  className="flex w-full items-center justify-between border border-[#D4AF37]/70 bg-black/55 px-4 py-3 font-body-md text-sm text-[#E0E6ED]"
-                >
-                  <span>
-                    Culture {selectedCultures.length ? `- Selected (${selectedCultures.length})` : "- All"}
-                  </span>
-                  <span className="material-symbols-outlined text-base" aria-hidden="true">
-                    {isCultureMenuOpen ? "expand_less" : "expand_more"}
-                  </span>
-                </button>
-
-                {isCultureMenuOpen ? (
-                  <div className="absolute z-20 mt-2 w-full border border-[#D4AF37]/70 bg-[#0B0C10] shadow-[0_6px_24px_rgba(0,0,0,0.5)]">
-                    <div className="flex items-center justify-between border-b border-[#D4AF37]/30 px-3 py-2">
-                      <p className="font-cinzel text-[11px] uppercase tracking-[0.2em] text-[#D4AF37]">Major Cultures</p>
-                      <button
-                        type="button"
-                        onClick={clearCultureFilters}
-                        className="font-body-md text-[10px] uppercase tracking-[0.16em] text-[#DDE3EA] hover:text-[#D4AF37]"
-                      >
-                        Clear All
-                      </button>
-                    </div>
-                    <ul className="max-h-56 overflow-y-auto py-1">
-                      {CULTURE_OPTIONS.map((cultureOption) => {
-                        const isSelected = selectedCultures.some(
-                          (value) => value.toLowerCase() === cultureOption.toLowerCase(),
-                        );
-                        return (
-                          <li key={cultureOption}>
-                            <label
-                              className={
-                                isSelected
-                                  ? "flex cursor-pointer items-center gap-2 bg-[#D4AF37]/12 px-3 py-2 font-body-md text-xs text-[#D4AF37]"
-                                  : "flex cursor-pointer items-center gap-2 px-3 py-2 font-body-md text-xs text-[#DDE3EA] hover:bg-white/5"
-                              }
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => onCultureToggle(cultureOption)}
-                                className="h-3.5 w-3.5 accent-[#D4AF37]"
-                              />
-                              <span>{cultureOption}</span>
-                            </label>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <label className="block">
-                <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Born</span>
-                <input
-                  type="text"
-                  value={textFilters.born}
-                  onChange={(event) => updateTextFilter("born", event.target.value)}
-                  placeholder="In 283 AC..."
-                  className="w-full border border-[#D4AF37]/35 bg-black/45 px-4 py-3 font-body-md text-sm text-[#E0E6ED] placeholder:text-[#E0E6ED]/55 focus:border-[#D4AF37] focus:outline-none"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Died</span>
-                <input
-                  type="text"
-                  value={textFilters.died}
-                  onChange={(event) => updateTextFilter("died", event.target.value)}
-                  placeholder="In 300 AC..."
-                  className="w-full border border-[#D4AF37]/35 bg-black/45 px-4 py-3 font-body-md text-sm text-[#E0E6ED] placeholder:text-[#E0E6ED]/55 focus:border-[#D4AF37] focus:outline-none"
-                />
-              </label>
-            </div>
-
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-[1fr_1fr_auto]">
-              <div>
-                <p className="mb-2 font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Gender</p>
-                <div className="flex flex-wrap gap-2">
-                  {GENDER_OPTIONS.map((option) => (
-                    <FilterOptionButton
-                      key={option.value}
-                      label={option.label}
-                      isActive={genderFilter === option.value}
-                      onClick={() => {
-                        setGenderFilter(option.value);
-                        setCurrentPage(1);
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <p className="mb-2 font-cinzel text-xs uppercase tracking-[0.22em] text-[#D4AF37]">Status</p>
-                <div className="flex flex-wrap gap-2">
-                  {STATUS_OPTIONS.map((option) => (
-                    <FilterOptionButton
-                      key={option.value}
-                      label={option.label}
-                      isActive={statusFilter === option.value}
-                      onClick={() => {
-                        setStatusFilter(option.value);
-                        setCurrentPage(1);
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
 
               <button
                 type="button"
                 onClick={clearFilters}
                 disabled={!hasActiveFilters}
-                className="h-11 self-end border border-[#D4AF37]/70 px-4 font-body-md text-xs uppercase tracking-[0.18em] text-[#E0E6ED] transition-colors duration-300 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-11 border border-[#D4AF37]/70 px-4 font-body-md text-xs uppercase tracking-[0.18em] text-[#E0E6ED] transition-colors duration-300 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Clear Filters
               </button>
             </div>
           </section>
 
+          {/* Stats bar */}
           <section className="mx-auto mb-8 flex w-full max-w-[1180px] flex-col gap-3 border border-[#D4AF37]/40 bg-black/40 p-4 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
             <p className="font-body-md text-xs uppercase tracking-[0.18em] text-[#DDE3EA]">
-              Results: <span className="text-[#D4AF37]">{pagination.totalFilteredItems}</span> of {pagination.totalItems}
+              Total: <span className="text-[#D4AF37]">{data.total_items.toLocaleString()}</span> Pokémon
             </p>
             <p className="font-body-md text-xs uppercase tracking-[0.18em] text-[#DDE3EA]">
-              Page <span className="text-[#D4AF37]">{pagination.page}</span> of {pagination.totalPages} showing {characters.length} of {" "}
-              {pagination.totalFilteredItems}
+              Page <span className="text-[#D4AF37]">{data.page}</span> of {totalPages}
             </p>
           </section>
 
+          {/* Card grid */}
           <section className="mx-auto grid w-full max-w-[1180px] grid-cols-1 gap-7 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {renderCards()}
           </section>
 
+          {/* Pagination */}
           <section className="mx-auto mt-12 flex w-full max-w-[1180px] items-center justify-between gap-3">
             <button
               type="button"
-              onClick={() => setCurrentPage((previous) => Math.max(1, previous - 1))}
-              disabled={!pagination.hasPrevious || isLoading}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage <= 1 || isLoading}
               className="group flex items-center gap-3 border border-[#D4AF37] px-5 py-3 font-body-md text-label-caps text-[#E0E6ED] transition-all duration-400 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 sm:px-8"
             >
               <span className="material-symbols-outlined text-sm transition-transform group-hover:-translate-x-2">
                 arrow_back_ios
               </span>
-              Previous Realm
+              Previous Page
             </button>
 
             <div className="font-body-md text-xs uppercase tracking-[0.18em] text-[#E0E6ED]/80">
-              {pagination.page} / {pagination.totalPages}
+              {data.page} / {totalPages}
             </div>
 
             <button
               type="button"
-              onClick={() => pagination.hasNext && setCurrentPage((previous) => previous + 1)}
-              disabled={!pagination.hasNext || isLoading}
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage >= totalPages || isLoading}
               className="group flex items-center gap-3 border border-[#D4AF37] px-5 py-3 font-body-md text-label-caps text-[#E0E6ED] transition-all duration-400 hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 sm:px-8"
             >
-              Next Realm
+              Next Page
               <span className="material-symbols-outlined text-sm transition-transform group-hover:translate-x-2">
                 arrow_forward_ios
               </span>
@@ -626,4 +335,3 @@ function Dashboard() {
 }
 
 export default Dashboard;
-

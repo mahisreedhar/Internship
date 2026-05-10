@@ -1,10 +1,18 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers.proxy_routes import router as proxy_router
+from routers.proxy_routes import load_master_index, router as proxy_router
 
 
-app = FastAPI(title="GoT Proxy API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await load_master_index()
+    yield
+
+
+app = FastAPI(title="Pokémon BFF API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
