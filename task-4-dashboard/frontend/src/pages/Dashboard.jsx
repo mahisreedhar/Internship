@@ -242,6 +242,9 @@ function Dashboard() {
           <h3 className="mb-3 font-cinzel text-3xl font-black leading-none tracking-[0.02em] text-[#3C5AA6]">
             {pokemon.name}
           </h3>
+          <p className="mb-3 font-body-md text-xs uppercase tracking-[0.14em] text-[#64748B]">
+            {pokemon.generation?.label ?? "Generation Unknown"}
+          </p>
 
           <div className="mb-3 flex flex-wrap gap-2">
             {pokemon.types.map((typeName) => (
