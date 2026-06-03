@@ -28,7 +28,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.models import User, Project, Task  # noqa: F401 — registers models with Base
-from app.routers import auth, projects, tasks
+from app.routers import auth, projects, tasks, users
 
 
 @asynccontextmanager
@@ -54,6 +54,9 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(projects.router)
 app.include_router(tasks.router)
+# Dedicated user-search router: GET /v1/users?search=<term>&limit=10
+# Powers the async autocomplete combobox in the task assignee field.
+app.include_router(users.router)
 
 
 @app.get("/health", tags=["Health"])
