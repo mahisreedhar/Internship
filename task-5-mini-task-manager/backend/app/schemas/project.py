@@ -5,8 +5,14 @@ ARCHITECTURAL NOTE — Project Schemas
 they want to change. The router uses `model_dump(exclude_unset=True)` to
 iterate only over explicitly-provided fields, preventing accidental nulling
 of columns the caller didn't mention.
+
+`ProjectListResponse` splits the project list into two arrays, directly
+mirroring the two-section sidebar layout. This avoids the need for the
+frontend to filter a flat list — the ownership boundary is enforced and
+communicated by the API, not inferred by the client. Each project carries
+`owner_id` so the frontend can independently verify ownership when needed.
 """
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -27,3 +33,20 @@ class ProjectResponse(BaseModel):
     owner_id: int
 
     model_config = {"from_attributes": True}
+
+
+class ProjectListResponse(BaseModel):
+    """
+    Returned by GET /projects/ to power the two-section sidebar.
+
+    owned_projects — Projects created by the current user.
+      Full access: create/delete tasks, edit/delete the project itself.
+
+    assigned_projects — Projects owned by other users where the current
+      user is assigned to at least one task. Scoped access: view the full
+      Kanban board, but only update the status of tasks assigned to them.
+      The `owner_id` field on each entry still identifies who owns the
+      project, which the frontend uses for any secondary ownership checks.
+    """
+    owned_projects: List[ProjectResponse]
+    assigned_projects: List[ProjectResponse]

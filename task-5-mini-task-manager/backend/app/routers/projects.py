@@ -1,34 +1,51 @@
 """
-ARCHITECTURAL NOTE — Projects Router & Authorisation
-=====================================================
+ARCHITECTURAL NOTE — Projects Router, Ownership & Assignment Scoping
+=====================================================================
 OWNERSHIP ENFORCEMENT:
-  Every mutating route (GET detail, PUT, DELETE) calls `.filter(Project.owner_id == current_user_id)`.
-  If the record exists but belongs to another user, we return 403 Forbidden,
-  not 404. Returning 404 would also be acceptable (security through obscurity),
-  but 403 is semantically correct and easier to debug in your own client.
+  Every mutating route (GET detail, PUT, DELETE) calls `_get_owned_project`,
+  which filters by `Project.owner_id == current_user_id`. If the record
+  exists but belongs to another user we return 403 Forbidden, not 404.
+  Returning 404 would also be acceptable (security-through-obscurity), but
+  403 is semantically correct and easier to debug in your own client.
 
-  The list route only queries `WHERE owner_id = current_user_id` so the
-  response never leaks other users' project IDs — an attacker can't even
-  discover what projects exist for other accounts.
+LIST ENDPOINT — SPLIT RESPONSE:
+  GET /projects/ now returns a ProjectListResponse with two arrays:
 
-`model_dump(exclude_unset=True)` on PATCH/PUT means only fields the client
-explicitly sent are written. Without this, optional fields default to `None`
+  owned_projects: The classic `WHERE owner_id = current_user_id` query.
+    No IDs from other users' projects are present, so the response never
+    leaks the existence of projects the caller doesn't own.
+
+  assigned_projects: Projects where the caller is NOT the owner but IS
+    assigned to at least one task within that project. Computed as a
+    subquery on the tasks table (distinct project_ids where
+    assignee_id == current_user_id), then joined back to projects with an
+    extra filter that excludes any the user already owns. These projects
+    appear in the "ASSIGNED PROJECTS" sidebar section and receive scoped
+    access: view the full board + update own task statuses only.
+
+`model_dump(exclude_unset=True)` on PUT means only fields the client
+explicitly sent are written. Without this, Optional fields default to None
 and silently overwrite existing data.
 """
-from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import get_current_user_id
 from app.models.project import Project
-from app.schemas.project import ProjectCreate, ProjectResponse, ProjectUpdate
+from app.models.task import Task
+from app.schemas.project import (
+    ProjectCreate,
+    ProjectListResponse,
+    ProjectResponse,
+    ProjectUpdate,
+)
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
 
 def _get_owned_project(project_id: int, user_id: int, db: Session) -> Project:
+    """Raises 403 unless the current user is the project owner."""
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -37,12 +54,45 @@ def _get_owned_project(project_id: int, user_id: int, db: Session) -> Project:
     return project
 
 
-@router.get("/", response_model=List[ProjectResponse])
+@router.get("/", response_model=ProjectListResponse)
 def list_projects(
     current_user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
-    return db.query(Project).filter(Project.owner_id == current_user_id).all()
+    """
+    Returns a split project list for the two-section sidebar.
+
+    owned_projects: projects where this user is the creator (full access).
+    assigned_projects: projects owned by others where this user has at
+      least one assigned task (scoped: view board + update own task status).
+
+    The subquery approach avoids an N+1 pattern: a single IN clause fetches
+    all relevant project rows without looping over task results in Python.
+    The exclusion filter (`owner_id != current_user_id`) ensures a project
+    never appears in both lists even if the owner assigns a task to themselves.
+    """
+    # Projects where this user is the creator/owner
+    owned = db.query(Project).filter(Project.owner_id == current_user_id).all()
+
+    # Subquery: distinct project IDs from tasks where this user is the assignee
+    assigned_project_ids_sq = (
+        db.query(Task.project_id)
+        .filter(Task.assignee_id == current_user_id)
+        .distinct()
+        .subquery()
+    )
+
+    # Resolve those project rows, excluding any already owned by this user
+    assigned = (
+        db.query(Project)
+        .filter(
+            Project.id.in_(assigned_project_ids_sq),
+            Project.owner_id != current_user_id,
+        )
+        .all()
+    )
+
+    return ProjectListResponse(owned_projects=owned, assigned_projects=assigned)
 
 
 @router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)

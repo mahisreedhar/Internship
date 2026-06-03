@@ -31,6 +31,19 @@ class TaskUpdate(BaseModel):
     assignee_id: Optional[int] = None
 
 
+class TaskStatusUpdate(BaseModel):
+    """
+    Payload for PATCH /tasks/{task_id}/status.
+
+    Intentionally minimal — this endpoint is dedicated to status transitions
+    only. The reduced surface area lets the backend enforce targeted RBAC:
+    project owners may advance any task; task assignees may only advance
+    their own assigned task. Pydantic validates that `status` is a member
+    of TaskStatus, so arbitrary strings never reach the database.
+    """
+    status: TaskStatus
+
+
 class TaskResponse(BaseModel):
     id: int
     title: str

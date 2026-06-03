@@ -1,3 +1,10 @@
+/**
+ * KanbanBoard renders the three-column status layout.
+ *
+ * isOwner and currentUserId are forwarded unchanged to each TaskCard.
+ * TaskCard uses them to compute whether the current user may change each
+ * task's status, and whether to show or hide the edit/delete controls.
+ */
 import TaskCard from './TaskCard';
 
 const COLUMNS = [
@@ -18,7 +25,14 @@ const COLUMNS = [
   },
 ];
 
-export default function KanbanBoard({ tasks, onEditTask, onDeleteTask, onStatusChange }) {
+export default function KanbanBoard({
+  tasks,
+  onEditTask,
+  onDeleteTask,
+  onStatusChange,
+  isOwner,
+  currentUserId,
+}) {
   return (
     <div className="flex gap-4 flex-1 overflow-x-auto pb-2">
       {COLUMNS.map(({ status, border, header }) => {
@@ -47,9 +61,14 @@ export default function KanbanBoard({ tasks, onEditTask, onDeleteTask, onStatusC
                   <TaskCard
                     key={task.id}
                     task={task}
-                    onEdit={() => onEditTask(task)}
-                    onDelete={() => onDeleteTask(task.id)}
+                    // onEdit / onDelete are null when the parent (Dashboard) set
+                    // them to null for assigned-project views — TaskCard checks
+                    // both `isOwner` and these props before rendering the buttons.
+                    onEdit={onEditTask ? () => onEditTask(task) : null}
+                    onDelete={onDeleteTask ? () => onDeleteTask(task.id) : null}
                     onStatusChange={onStatusChange}
+                    isOwner={isOwner}
+                    currentUserId={currentUserId}
                   />
                 ))
               )}
