@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 import json
 from typing import Any
 from urllib.request import Request, urlopen
@@ -13,7 +13,7 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for mismatched virtua
 router = APIRouter()
 
 POKEAPI_BASE = "https://pokeapi.co/api/v2"
-MASTER_INDEX_URL = f"{POKEAPI_BASE}/pokemon?limit=1300"
+MASTER_INDEX_URL = f"{POKEAPI_BASE}/pokemon?limit=1350"
 TYPE_URL_TEMPLATE = f"{POKEAPI_BASE}/type/{{type_name}}"
 POKEMON_MAX_ID = 1025
 POKEMON_TYPES = {

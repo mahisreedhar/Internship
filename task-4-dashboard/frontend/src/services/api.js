@@ -38,7 +38,7 @@ export async function fetchPokemon({
   try {
     response = await fetch(buildUrl(`/api/pokemon?${params}`));
   } catch {
-    const err = new Error("Cannot reach the Pokemon API server. Is the backend running?");
+    const err = new Error("Cannot reach the Pokemon API server.");
     err.status = 503;
     throw err;
   }
